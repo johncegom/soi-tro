@@ -1,0 +1,30 @@
+version: '3'
+
+tasks:
+  default:
+    desc: List all available tasks
+    cmds:
+      - task --list
+
+  build:
+    desc: Build the application binary
+    cmds:
+      - go build -o soi-tro.exe ./cmd/main.go
+
+  run:
+    desc: Run the application
+    cmds:
+      - go run ./cmd/main.go
+
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - cmd: del /q soi-tro.exe
+        platforms: [windows]
+      - cmd: rm -f soi-tro
+        platforms: [linux, darwin]
+
+  test:
+    desc: Run all tests in the project
+    cmds:
+      - go test -v ./...
