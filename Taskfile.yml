@@ -19,7 +19,7 @@ tasks:
   clean:
     desc: Clean build artifacts
     cmds:
-      - cmd: del /q soi-tro.exe
+      - cmd: cmd /c del /q soi-tro.exe
         platforms: [windows]
       - cmd: rm -f soi-tro
         platforms: [linux, darwin]
