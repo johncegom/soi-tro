@@ -1,9 +1,10 @@
 package analyzer
 
 import (
-	"reflect"
-	"strings"
+	"fmt"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestParseEnv(t *testing.T) {
@@ -57,13 +58,11 @@ func TestParseEnv(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
+			is := assert.New(t)
 			got := ParseEnv(tt.content)
-			if !reflect.DeepEqual(got, tt.expected) {
-				t.Errorf("ParseEnv() = %v, want %v", got, tt.expected)
-			}
+			is.Equal(tt.expected, got)
 		})
 	}
 }
@@ -76,14 +75,25 @@ func FuzzParseEnv(f *testing.F) {
 	f.Add("")
 
 	f.Fuzz(func(t *testing.T, content string) {
+		is := assert.New(t)
 		// Parser must never panic regardless of the random content fuzzed
 		got := ParseEnv(content)
 
 		for k := range got {
 			// Invariant check: Keys should never contain '='
-			if strings.Contains(k, "=") {
-				t.Errorf("Parsed key %q contains '='", k)
-			}
+			is.NotContains(k, "=")
 		}
 	})
+}
+
+// ExampleParseEnv shows how ParseEnv parses raw string content representing a .env file format.
+func ExampleParseEnv() {
+	content := "API_KEY=secret_key\nPORT=8080\n# comment\n"
+	envMap := ParseEnv(content)
+	fmt.Println(envMap["API_KEY"])
+	fmt.Println(envMap["PORT"])
+
+	// Output:
+	// secret_key
+	// 8080
 }
