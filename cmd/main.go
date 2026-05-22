@@ -56,6 +56,11 @@ func main() {
 	// Load environment variables from the secure .env file
 	loadEnv(".env")
 
+	// Ensure GEMINI_API_KEY is available (check env, load from global config, or prompt)
+	if err := analyzer.EnsureGlobalAPIKey(); err != nil {
+		log.Fatalf("❌ Lỗi cấu hình API Key: %v", err)
+	}
+
 	for {
 		fmt.Println("=========================================================================")
 		fmt.Println("🚀                  SOI TRỌ - TRÍCH XUẤT TIN THUÊ PHÒNG                  ")
