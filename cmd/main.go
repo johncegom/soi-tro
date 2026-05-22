@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -17,44 +16,9 @@ import (
 	"github.com/charmbracelet/huh"
 )
 
-// loadEnv reads a .env file and sets environment variables in a secure manner.
-func loadEnv(filename string) {
-	file, err := os.Open(filename)
-	if err != nil {
-		// If .env is missing, we gracefully proceed and rely on standard shell environment variables.
-		return
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		// Ignore empty lines and comments
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-		parts := strings.SplitN(line, "=", 2)
-		if len(parts) != 2 {
-			continue
-		}
-		key := strings.TrimSpace(parts[0])
-		val := strings.TrimSpace(parts[1])
-		// Remove wrapping quotes if present
-		if (strings.HasPrefix(val, "\"") && strings.HasSuffix(val, "\"")) ||
-			(strings.HasPrefix(val, "'") && strings.HasSuffix(val, "'")) {
-			val = val[1 : len(val)-1]
-		}
-		os.Setenv(key, val)
-	}
-
-	if err := scanner.Err(); err != nil {
-		log.Printf("Warning: error scanning environment file %s: %v", filename, err)
-	}
-}
-
 func main() {
 	// Load environment variables from the secure .env file
-	loadEnv(".env")
+	_ = analyzer.LoadEnv(".env")
 
 	// Ensure GEMINI_API_KEY is available (check env, load from global config, or prompt)
 	if err := analyzer.EnsureGlobalAPIKey(); err != nil {
