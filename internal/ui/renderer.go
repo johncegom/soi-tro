@@ -103,7 +103,7 @@ func RenderResults(result *gemini.RentalExtractionResult, config *analyzer.Confi
 		if isRequired {
 			// Check if Gemini identified it as missing
 			for _, m := range result.MissingFields {
-				if strings.ToLower(m) == strings.ToLower(field.key) {
+				if strings.EqualFold(m, field.key) {
 					isMissing = true
 					break
 				}
