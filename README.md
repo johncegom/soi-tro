@@ -14,6 +14,7 @@
   - *Giá thuê / Cọc:* `4tr5`, `4.5m` $\rightarrow$ `4,500,000 VND`; `cọc 1t` $\rightarrow$ `Cọc 1 tháng`.
   - *Điện / Nước:* `4k/số` $\rightarrow$ `4,000 VND/kWh`; `100k/ng` $\rightarrow$ `100,000 VND/người`.
   - *Tiện ích:* `free xe` $\rightarrow$ `Miễn phí giữ xe`.
+- **🔑 Quản lý API Key Toàn cục (Global Key Storage):** Hỗ trợ lưu trữ API Key tập trung trong thư mục cấu hình người dùng `~/.config/soi-tro/config.json`. Nếu không tìm thấy khóa, ứng dụng sẽ hiển thị form TUI nhập liệu bảo mật (ẩn mật khẩu) để lưu trữ nhanh, giúp chạy chương trình từ bất kỳ thư mục nào mà không cần giữ file `.env`.
 - **🔍 Phân Tích Khoảng Trống (Gap Analysis):** Đối chiếu các thông tin trích xuất được với cấu hình Checklist bắt buộc để đưa ra cảnh báo thuộc tính bị thiếu rõ ràng trên giao diện bảng.
 - **💬 Soạn Tin Nhắn Tự Động:** Tự động dự thảo **02 mẫu tin nhắn thăm hỏi** (phong cách *Lịch sự* & *Trực diện*) tích hợp địa chỉ tin đăng, sử dụng cặp xưng hô tự nhiên (`mình` - `b/bạn`) để hỏi nhanh các thông tin còn thiếu.
 - **📋 Tích hợp Clipboard Thông minh:** Tự động sao chép Số điện thoại chủ nhà (hoặc tin nhắn mẫu nếu không có SĐT) vào clipboard hệ thống ngay khi phân tích xong để người dùng có thể liên hệ Zalo/SMS lập tức.
@@ -67,7 +68,8 @@ soi-tro/
 │   └── main.go                 # Điểm khởi chạy ứng dụng (Main Entrypoint) & Luồng vòng lặp chính
 ├── internal/
 │   ├── analyzer/
-│   │   └── engine.go           # Quản lý và xử lý cấu hình Config của ứng dụng
+│   │   ├── engine.go           # Quản lý và xử lý cấu hình Config của ứng dụng
+│   │   └── global_config.go    # Quản lý cấu hình toàn cục (~/.config/soi-tro/config.json) & TUI API-Key
 │   ├── exporter/
 │   │   └── exporter.go         # Xuất báo cáo kết quả, định dạng đầu ra, phân tách dung lượng file an toàn
 │   ├── gemini/
@@ -95,11 +97,14 @@ Di chuyển vào thư mục dự án và chạy lệnh sau để tải các pack
 go mod tidy
 ```
 
-### 3. Thiết lập biến môi trường
-Tạo một file `.env` tại thư mục gốc của dự án với nội dung như sau:
-```env
-GEMINI_API_KEY="MÃ_API_KEY_GEMINI_CỦA_BẠN"
-```
+### 3. Thiết lập biến môi trường (Tùy chọn)
+Soi Trọ hỗ trợ cấu hình cực kỳ linh hoạt và an toàn:
+- **Cách 1 (Khuyên dùng):** Không cần tạo file gì cả. Trong lần đầu khởi chạy, ứng dụng sẽ tự động hiển thị form nhập liệu CLI bảo mật và lưu khóa API toàn cục của bạn tại `~/.config/soi-tro/config.json`.
+- **Cách 2:** Thiết lập biến môi trường trực tiếp trên terminal của bạn (ví dụ: `$env:GEMINI_API_KEY="..."` trên PowerShell).
+- **Cách 3:** Tạo một file `.env` tại thư mục gốc của dự án với nội dung như sau:
+  ```env
+  GEMINI_API_KEY="MÃ_API_KEY_GEMINI_CỦA_BẠN"
+  ```
 
 ### 4. Khởi chạy ứng dụng
 Bạn có thể khởi chạy chương trình bằng nhiều cách:
@@ -133,9 +138,14 @@ task clean
 
 ## 🔒 Chính Sách Bảo Mật & An Toàn Dữ Liệu
 
-- **Khóa API bảo mật:** Ứng dụng đọc `GEMINI_API_KEY` an toàn từ tệp `.env` riêng tư hoặc môi trường hệ thống, giảm thiểu rò rỉ mã bảo mật trên git history.
-- **Bảo vệ PII (Thông tin cá nhân):** Các file xuất kết quả chứa số điện thoại chủ nhà và thông tin liên hệ được thiết lập quyền ghi `0o600` (chỉ duy nhất tài khoản user chạy chương trình trên hệ điều hành mới có quyền xem nội dung).
-- **Chống lỗi tràn dẫn xuất (Path Traversal):** Đường dẫn thư mục lưu file xuất kết quả được phân tích và chuẩn hóa bằng đường dẫn tuyệt đối (`filepath.Abs`) trước khi thực hiện ghi file nhằm ngăn chặn các hành vi cố tình leo thang thư mục hệ thống.
+Ứng dụng được thiết kế tuân thủ nghiêm ngặt các quy tắc kỹ thuật:
+
+- **🔑 Bảo mật Thông tin Nhạy cảm (Secrets Management):** Bảo vệ API Key của bạn một cách an toàn và tối ưu:
+  - Khóa API được lưu trữ an toàn bên ngoài thư mục chứa mã nguồn (mục tiêu ngăn chặn tuyệt đối rò rỉ mã bảo mật trên Git History) thông qua hệ thống lưu trữ toàn cục hoặc `.env` được cấu hình trong `.gitignore`.
+  - Khi thiết lập khóa lần đầu qua TUI, API Key được ẩn bảo mật (`huh.EchoModePassword`) nhằm chống tấn công nhìn trộm màn hình (shoulder-surfing).
+  - Thư mục lưu cấu hình toàn cục được khởi tạo với quyền truy cập nghiêm ngặt `0o700` (chỉ duy nhất chủ tài khoản hệ điều hành có quyền đọc/ghi/truy cập) và file JSON được thiết lập phân quyền bảo mật tối đa `0o600`.
+- **🛡️ Bảo vệ PII (Thông tin cá nhân):** Các file xuất kết quả chứa thông tin số điện thoại liên hệ của chủ nhà được phân quyền `0o600` nhằm ngăn chặn các tiến trình không có thẩm quyền trên cùng hệ thống đọc được dữ liệu nhạy cảm.
+- **🚫 Chống lỗi tràn dẫn xuất (Path Traversal Prevention):** Mọi đường dẫn thư mục lưu file do người dùng cung cấp đều được chuẩn hóa sang đường dẫn tuyệt đối (`filepath.Abs`) trước khi thực hiện các tác vụ tạo tệp tin, ngăn chặn triệt để hành vi cố tình leo thang cây thư mục hệ thống.
 
 ---
 
