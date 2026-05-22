@@ -1,0 +1,33 @@
+# Binaries and executables
+bin/
+dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+soi-tro
+
+# Test coverage and profiles
+*.test
+*.out
+*.prof
+coverage.txt
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Editor and IDE configs
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS specific files
+Thumbs.db
+.DS_Store
