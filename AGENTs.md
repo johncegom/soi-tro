@@ -3,7 +3,7 @@
 > [!IMPORTANT]
 > **File Modification Policy**:
 > Do not edit or create any files in the workspace automatically. 
-> You MUST present all proposed changes as a text diff or code block in the chat first, and wait for the user's explicit permission/approval before executing any file edit or write tools.
+> You MUST present all proposed changes as a text diff or code block in the chat first, and wait for the user's explicit approval (strictly by typing "approved", case-insensitively) before executing any file edit or write tools.
 
 ---
 
@@ -60,5 +60,5 @@ Before generating any markdown code blocks, terminal execution chains, or techni
 2. **Context Activation:** Load `cc-skills-golang/skills/<skill>/SKILL.md` (and optional `references/*` on demand).
 3. **Verify Constraints:** Cross-check proposed implementation against the active skill's Core Principles and Common Mistakes.
 4. **Pre-flight Diagnosis:** Before proposing code edits, run local diagnostic commands (e.g. `go test`, `golangci-lint run`) if suggested by the skill's `Diagnose:` directive, confirming issues without auto-fixing them.
-5. **Interactive Diff Proposal:** Format proposed changes as a text diff or code block in the chat. **WAIT for explicit user approval** before running any write/edit tools.
+5. **Interactive Diff Proposal:** Format proposed changes as a text diff or code block in the chat. **WAIT for explicit user approval (strictly by typing "approved", case-insensitively)** before running any write/edit tools.
 6. **Compile & Test Verification:** After user-approved file edits, verify correctness by executing `go build` and `go test`.

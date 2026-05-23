@@ -423,9 +423,11 @@ func ConfigureExport() error {
 	}
 
 	// Pre-populate defaults if not yet configured.
+	defaultExportDir := filepath.Join(filepath.Dir(schemaPath), "exports")
+
 	currentDir := current.Dir
-	if !configured || currentDir == "" {
-		currentDir = "."
+	if !configured || currentDir == "" || currentDir == "." {
+		currentDir = ""
 	}
 	currentMaxKB := current.MaxSizeKB
 	if currentMaxKB <= 0 {
@@ -442,13 +444,13 @@ func ConfigureExport() error {
 		huh.NewGroup(
 			huh.NewInput().
 				Title("Thư mục lưu file xuất kết quả").
-				Description("Nhập đường dẫn thư mục. Sẽ được tạo tự động nếu chưa tồn tại.").
-				Placeholder("VD: D:\\Rentals\\exports").
+				Description(fmt.Sprintf("Nhập đường dẫn thư mục. Nhấn Enter hoặc phím Phải để dùng gợi ý bảo mật (%s)", defaultExportDir)).
+				Placeholder(defaultExportDir).
 				Value(&dirInput).
 				Validate(func(s string) error {
 					s = strings.TrimSpace(s)
 					if s == "" {
-						return errors.New("đường dẫn không được để trống")
+						return nil // Allow empty input to use the default secure suggestion at any time
 					}
 					// Resolve to absolute path to validate it is a legal path.
 					// This mirrors the security fix in exporter.WriteResult.
@@ -490,6 +492,9 @@ func ConfigureExport() error {
 	}
 
 	dirInput = strings.TrimSpace(dirInput)
+	if dirInput == "" {
+		dirInput = defaultExportDir
+	}
 	maxKB, _ := strconv.Atoi(strings.TrimSpace(maxKBInput))
 
 	// Resolve to absolute path before saving — consistent with exporter security fix.
