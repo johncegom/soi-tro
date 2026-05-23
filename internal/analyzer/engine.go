@@ -13,15 +13,17 @@ type Config struct {
 
 // LoadConfig reads the configuration from a JSON file path
 func LoadConfig(filePath string) (*Config, error) {
-	file, err := os.Open(filePath)
+	data, err := os.ReadFile(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open config file: %w", err)
+		return nil, fmt.Errorf("failed to read config file: %w", err)
 	}
-	defer file.Close()
+
+	if err := VerifySchema(data); err != nil {
+		return nil, err
+	}
 
 	var config Config
-	decoder := json.NewDecoder(file)
-	if err := decoder.Decode(&config); err != nil {
+	if err := json.Unmarshal(data, &config); err != nil {
 		return nil, fmt.Errorf("failed to decode config json: %w", err)
 	}
 

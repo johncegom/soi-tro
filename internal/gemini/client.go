@@ -166,15 +166,17 @@ Tin nhắn mẫu (trong 'sample_messages', chính xác 2 tin):
 
 // LoadSchema loads the OpenAPI 3.0 schema from a JSON file.
 func LoadSchema(filePath string) (*genai.Schema, error) {
-	file, err := os.Open(filePath)
+	data, err := os.ReadFile(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open schema file: %w", err)
+		return nil, fmt.Errorf("failed to read schema file: %w", err)
 	}
-	defer file.Close()
+
+	if err := analyzer.VerifySchema(data); err != nil {
+		return nil, err
+	}
 
 	var schema genai.Schema
-	decoder := json.NewDecoder(file)
-	if err := decoder.Decode(&schema); err != nil {
+	if err := json.Unmarshal(data, &schema); err != nil {
 		return nil, fmt.Errorf("failed to decode schema JSON: %w", err)
 	}
 
@@ -183,28 +185,47 @@ func LoadSchema(filePath string) (*genai.Schema, error) {
 
 // SaveSchema writes the genai.Schema and custom config back to a JSON file path.
 func SaveSchema(filePath string, schema *genai.Schema, xRequiredFields []string) error {
+	// Read existing file to preserve other fields (like x_export_config)
+	var unified map[string]any
+	data, err := os.ReadFile(filePath)
+	if err == nil {
+		if verifyErr := analyzer.VerifySchema(data); verifyErr == nil {
+			_ = json.Unmarshal(data, &unified)
+		}
+	}
+	if unified == nil {
+		unified = make(map[string]any)
+	}
+
 	schemaBytes, err := json.Marshal(schema)
 	if err != nil {
 		return fmt.Errorf("failed to marshal schema: %w", err)
 	}
 
-	var unified map[string]any
-	if err := json.Unmarshal(schemaBytes, &unified); err != nil {
+	var schemaMap map[string]any
+	if err := json.Unmarshal(schemaBytes, &schemaMap); err != nil {
 		return fmt.Errorf("failed to unmarshal schema to map: %w", err)
+	}
+
+	// Merge all schema properties into unified map
+	for k, v := range schemaMap {
+		unified[k] = v
 	}
 
 	unified["x_required_fields"] = xRequiredFields
 
-	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
+	unifiedBytes, err := json.Marshal(unified)
 	if err != nil {
-		return fmt.Errorf("failed to open schema file for writing: %w", err)
+		return fmt.Errorf("failed to marshal unified schema: %w", err)
 	}
-	defer file.Close()
 
-	encoder := json.NewEncoder(file)
-	encoder.SetIndent("", "  ")
-	if err := encoder.Encode(unified); err != nil {
-		return fmt.Errorf("failed to encode unified JSON: %w", err)
+	signedBytes, err := analyzer.SignSchema(unifiedBytes)
+	if err != nil {
+		return fmt.Errorf("failed to sign schema: %w", err)
+	}
+
+	if err := os.WriteFile(filePath, signedBytes, 0o600); err != nil {
+		return fmt.Errorf("failed to write schema file: %w", err)
 	}
 
 	return nil
@@ -223,6 +244,10 @@ func LoadExportConfig(filePath string) (exportCfg struct {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return exportCfg, false, fmt.Errorf("failed to read schema file: %w", err)
+	}
+
+	if err := analyzer.VerifySchema(data); err != nil {
+		return exportCfg, false, err
 	}
 
 	var raw map[string]json.RawMessage
@@ -250,6 +275,10 @@ func SaveExportConfig(filePath string, dir string, maxSizeKB int) error {
 		return fmt.Errorf("failed to read schema file: %w", err)
 	}
 
+	if err := analyzer.VerifySchema(data); err != nil {
+		return fmt.Errorf("existing schema file is untrusted: %w", err)
+	}
+
 	var unified map[string]any
 	if err := json.Unmarshal(data, &unified); err != nil {
 		return fmt.Errorf("failed to parse schema file: %w", err)
@@ -260,16 +289,18 @@ func SaveExportConfig(filePath string, dir string, maxSizeKB int) error {
 		"max_size_kb": maxSizeKB,
 	}
 
-	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
+	unifiedBytes, err := json.Marshal(unified)
 	if err != nil {
-		return fmt.Errorf("failed to open schema file for writing: %w", err)
+		return fmt.Errorf("failed to marshal unified schema: %w", err)
 	}
-	defer file.Close()
 
-	encoder := json.NewEncoder(file)
-	encoder.SetIndent("", "  ")
-	if err := encoder.Encode(unified); err != nil {
-		return fmt.Errorf("failed to encode schema with export config: %w", err)
+	signedBytes, err := analyzer.SignSchema(unifiedBytes)
+	if err != nil {
+		return fmt.Errorf("failed to sign schema: %w", err)
+	}
+
+	if err := os.WriteFile(filePath, signedBytes, 0o600); err != nil {
+		return fmt.Errorf("failed to write schema file: %w", err)
 	}
 
 	return nil

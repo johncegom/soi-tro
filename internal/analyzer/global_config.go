@@ -34,6 +34,16 @@ func EnsureSchemaFile() (string, error) {
 
 	// Check if file exists
 	if _, err := os.Stat(schemaPath); err == nil {
+		// Migration check: if schema exists but is not signed (e.g. legacy version), sign and lock it now.
+		data, err := os.ReadFile(schemaPath)
+		if err == nil {
+			if VerifySchema(data) != nil {
+				signedData, err := SignSchema(data)
+				if err == nil {
+					_ = os.WriteFile(schemaPath, signedData, 0o600)
+				}
+			}
+		}
 		return schemaPath, nil // already exists, nothing to do
 	} else if !os.IsNotExist(err) {
 		return "", fmt.Errorf("failed to check schema file status: %w", err)
@@ -45,8 +55,14 @@ func EnsureSchemaFile() (string, error) {
 		return "", fmt.Errorf("failed to create config directory: %w", err)
 	}
 
+	// Sign the default schema bytes before writing to ensure it's secure from the start
+	signedDefaultBytes, err := SignSchema(defaultSchemaBytes)
+	if err != nil {
+		return "", fmt.Errorf("failed to sign default schema: %w", err)
+	}
+
 	// Write default schema bytes
-	if err := os.WriteFile(schemaPath, defaultSchemaBytes, 0o600); err != nil {
+	if err := os.WriteFile(schemaPath, signedDefaultBytes, 0o600); err != nil {
 		return "", fmt.Errorf("failed to write default schema: %w", err)
 	}
 
