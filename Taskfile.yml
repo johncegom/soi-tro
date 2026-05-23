@@ -9,7 +9,7 @@ tasks:
   build:
     desc: Build the application binary
     cmds:
-      - go build -o soi-tro.exe ./cmd/main.go
+      - go build -o bin/soi-tro.exe ./cmd/main.go
 
   run:
     desc: Run the application
@@ -19,9 +19,9 @@ tasks:
   clean:
     desc: Clean build artifacts
     cmds:
-      - cmd: cmd /c del /q soi-tro.exe
+      - cmd: cmd /c rmdir /s /q bin
         platforms: [windows]
-      - cmd: rm -f soi-tro
+      - cmd: rm -rf bin
         platforms: [linux, darwin]
 
   test:
@@ -29,12 +29,13 @@ tasks:
     cmds:
       - go test -v ./...
 
-  audit:
-    desc: Run tests and audit compliance against Agent-Level Guardrails
+  test:cover:
+    desc: Run all tests with code coverage profile
     cmds:
-      - go test -v -cover ./...
-      - 'echo "========================================="'
-      - 'echo "🛡️  Agent-Level Testing Guardrails: PASS"'
-      - 'echo "   - Named Subtests: YES"'
-      - 'echo "   - Parallelism:    YES"'
-      - 'echo "========================================="'
+      - go test -v -coverprofile=coverage.out ./...
+      - go tool cover -func=coverage.out
+
+  test:race:
+    desc: Run all tests with the race detector enabled (requires CGO)
+    cmds:
+      - go test -v -race ./...

@@ -25,6 +25,12 @@ func main() {
 		log.Fatalf("❌ Lỗi cấu hình API Key: %v", err)
 	}
 
+	// Ensure schema.json is initialized in ~/.config/soi-tro/
+	schemaPath, err := analyzer.EnsureSchemaFile()
+	if err != nil {
+		log.Fatalf("❌ Lỗi cấu hình tệp cấu hình (schema.json): %v", err)
+	}
+
 	for {
 		fmt.Println("=========================================================================")
 		fmt.Println("🚀                  SOI TRỌ - TRÍCH XUẤT TIN THUÊ PHÒNG                  ")
@@ -71,9 +77,9 @@ func main() {
 			continue
 		}
 		// 1. Load configuration from schema.json
-		cfg, err := analyzer.LoadConfig("schema.json")
+		cfg, err := analyzer.LoadConfig(schemaPath)
 		if err != nil {
-			log.Fatalf("❌ Lỗi tải tệp cấu hình (schema.json): %v", err)
+			log.Fatalf("❌ Lỗi tải tệp cấu hình (%s): %v", schemaPath, err)
 		}
 
 		// Loop to manage the input mode & retries
@@ -154,7 +160,7 @@ func main() {
 				fmt.Println()
 
 				// 6. Load export config once to determine if export option should be shown.
-				exportCfg, exportConfigured, exportErr := gemini.LoadExportConfig("schema.json")
+				exportCfg, exportConfigured, exportErr := gemini.LoadExportConfig(schemaPath)
 				if exportErr != nil {
 					fmt.Printf("⚠️  Không thể đọc cấu hình xuất: %v\n", exportErr)
 					exportConfigured = false
@@ -163,7 +169,7 @@ func main() {
 				// Build title map once for reuse across possible re-exports.
 				titleMap := map[string]string{}
 				if exportConfigured {
-					if schema, schemaErr := gemini.LoadSchema("schema.json"); schemaErr == nil {
+					if schema, schemaErr := gemini.LoadSchema(schemaPath); schemaErr == nil {
 						for k, prop := range schema.Properties {
 							if prop.Title != "" {
 								titleMap[k] = prop.Title

@@ -1,6 +1,7 @@
 package analyzer
 
 import (
+	_ "embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,6 +11,47 @@ import (
 
 	"github.com/charmbracelet/huh"
 )
+
+//go:embed schema.json
+var defaultSchemaBytes []byte
+
+// GetSchemaPath returns the absolute path to ~/.config/soi-tro/schema.json
+func GetSchemaPath() (string, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("failed to get user home directory: %w", err)
+	}
+	return filepath.Join(homeDir, ".config", "soi-tro", "schema.json"), nil
+}
+
+// EnsureSchemaFile checks if schema.json exists in ~/.config/soi-tro/.
+// If not, it writes the default schema content.
+func EnsureSchemaFile() (string, error) {
+	schemaPath, err := GetSchemaPath()
+	if err != nil {
+		return "", err
+	}
+
+	// Check if file exists
+	if _, err := os.Stat(schemaPath); err == nil {
+		return schemaPath, nil // already exists, nothing to do
+	} else if !os.IsNotExist(err) {
+		return "", fmt.Errorf("failed to check schema file status: %w", err)
+	}
+
+	// Create config directory if not exists
+	configDir := filepath.Dir(schemaPath)
+	if err := os.MkdirAll(configDir, 0o700); err != nil {
+		return "", fmt.Errorf("failed to create config directory: %w", err)
+	}
+
+	// Write default schema bytes
+	if err := os.WriteFile(schemaPath, defaultSchemaBytes, 0o600); err != nil {
+		return "", fmt.Errorf("failed to write default schema: %w", err)
+	}
+
+	return schemaPath, nil
+}
 
 // GlobalConfig represents the global system config format
 type GlobalConfig struct {

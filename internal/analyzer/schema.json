@@ -1,0 +1,132 @@
+{
+  "description": "Thông tin trích xuất từ bài đăng cho thuê phòng trọ tại Việt Nam",
+  "properties": {
+    "additional_notes": {
+      "description": "Các ghi chú bổ sung, tiện ích đi kèm (ví dụ: máy lạnh, máy giặt, giờ giấc tự do, địa chỉ) hoặc các lưu ý khác.",
+      "title": "Ghi chú thêm",
+      "type": "STRING"
+    },
+    "deposit": {
+      "description": "Số tiền đặt cọc đã được chuẩn hóa sang VND hoặc số tháng đặt cọc (ví dụ: 'Cọc 1 tháng', '9,000,000 VND'). Nếu không có thông tin, bắt buộc ghi 'Không đề cập'.",
+      "title": "Tiền đặt cọc",
+      "type": "STRING"
+    },
+    "electricity": {
+      "description": "Đơn giá tiền điện đã chuẩn hóa (ví dụ: '4,000 VND/kWh', '3,500 VND/số', 'Miễn phí'). Nếu không có thông tin, bắt buộc ghi 'Không đề cập'.",
+      "title": "Tiền điện",
+      "type": "STRING"
+    },
+    "elevator": {
+      "description": "Thông tin về việc toà nhà có sử dụng thang máy hay không. Nếu không có thông tin, bắt buộc ghi 'Không đề cập'.",
+      "title": "Thang máy",
+      "type": "STRING"
+    },
+    "floor": {
+      "description": "Thông tin về tầng hoặc số lầu của phòng trọ (ví dụ: 'Tầng 3', 'Lầu 2', 'Tầng trệt'). Nếu không có thông tin, bắt buộc ghi 'Không đề cập'.",
+      "title": "Số tầng / Lầu",
+      "type": "STRING"
+    },
+    "missing_fields": {
+      "description": "Danh sách các trường thông tin bắt buộc bị thiếu trong bài đăng, chọn từ các khóa: ['price', 'deposit', 'floor', 'parking_fee', 'pets_allowed'].",
+      "items": {
+        "enum": [
+          "price",
+          "deposit",
+          "floor",
+          "parking_fee",
+          "pets_allowed"
+        ],
+        "type": "STRING"
+      },
+      "title": "Trường còn thiếu",
+      "type": "ARRAY"
+    },
+    "parking_fee": {
+      "description": "Thông tin về phí giữ xe đã chuẩn hóa (ví dụ: 'Miễn phí', '100,000 VND/xe/tháng'). Nếu không có thông tin, bắt buộc ghi 'Không đề cập'.",
+      "title": "Phí giữ xe",
+      "type": "STRING"
+    },
+    "pets_allowed": {
+      "description": "Quy định về việc nuôi thú cưng trong phòng trọ (ví dụ: 'Được nuôi pet', 'Không cho nuôi pet', 'Chỉ cho nuôi mèo'). Nếu không có thông tin, bắt buộc ghi 'Không đề cập'.",
+      "title": "Cho phép nuôi thú cưng",
+      "type": "STRING"
+    },
+    "phone_number": {
+      "description": "Số điện thoại liên hệ của chủ nhà hoặc người đăng tin (ví dụ: '0912345678'). Nếu không có thông tin, bắt buộc ghi 'Không đề cập'.",
+      "title": "Số điện thoại chủ nhà",
+      "type": "STRING"
+    },
+    "price": {
+      "description": "Giá thuê nhà hàng tháng đã được chuẩn hóa (ví dụ: 4,500,000 VND). Tự động chuyển đổi viết tắt hoặc tiếng lóng như '4tr5', '4.5tr', '4m5' thành '4,500,000 VND'. Nếu không có thông tin, bắt buộc ghi 'Không đề cập'.",
+      "title": "Giá thuê",
+      "type": "STRING"
+    },
+    "sample_messages": {
+      "description": "Chính xác 2 tin nhắn nháp bằng tiếng Việt để hỏi chủ nhà về các thông tin còn thiếu.",
+      "items": {
+        "properties": {
+          "content": {
+            "description": "Nội dung tin nhắn nháp tự nhiên bằng tiếng Việt hỏi han thân thiện dựa vào những thông tin còn thiếu.",
+            "type": "STRING"
+          },
+          "style": {
+            "description": "Phong cách của tin nhắn nháp.",
+            "enum": [
+              "Lịch sự",
+              "Trực diện"
+            ],
+            "type": "STRING"
+          }
+        },
+        "required": [
+          "style",
+          "content"
+        ],
+        "type": "OBJECT"
+      },
+      "maxItems": 2,
+      "minItems": 2,
+      "title": "Tin nhắn mẫu",
+      "type": "ARRAY"
+    },
+    "service_fee": {
+      "description": "Thông tin vê phí dịch vụ liên quan, càng cụ thể càng tốt. Nếu không có thông tin, bắt buộc ghi 'Không đề cập'",
+      "title": "Phí dịch vụ",
+      "type": "STRING"
+    },
+    "water": {
+      "description": "Đơn giá tiền nước đã chuẩn hóa (ví dụ: '100,000 VND/người', '20,000 VND/m3', 'Miễn phí'). Nếu không có thông tin, bắt buộc ghi 'Không đề cập'.",
+      "title": "Tiền nước",
+      "type": "STRING"
+    }
+  },
+  "required": [
+    "additional_notes",
+    "missing_fields",
+    "sample_messages",
+    "parking_fee",
+    "price",
+    "water",
+    "deposit",
+    "floor",
+    "electricity",
+    "service_fee",
+    "phone_number",
+    "elevator"
+  ],
+  "type": "OBJECT",
+  "x_export_config": {
+    "dir": ".",
+    "max_size_kb": 1024
+  },
+  "x_required_fields": [
+    "electricity",
+    "parking_fee",
+    "price",
+    "water",
+    "deposit",
+    "floor",
+    "service_fee",
+    "elevator"
+  ]
+}

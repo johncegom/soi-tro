@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"google.golang.org/genai"
+	"soi-tro/internal/analyzer"
 )
 
 // SampleMessage represents the generated follow-up message in a specific style.
@@ -83,9 +84,13 @@ func (c *Client) ExtractRentalInfo(ctx context.Context, text string, imageBytes 
 	}
 
 	// Load response schema dynamically from file
-	schema, err := LoadSchema("schema.json")
+	schemaPath, err := analyzer.GetSchemaPath()
 	if err != nil {
-		return nil, fmt.Errorf("failed to load output schema (schema.json): %w", err)
+		return nil, fmt.Errorf("failed to get schema path: %w", err)
+	}
+	schema, err := LoadSchema(schemaPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load output schema (%s): %w", schemaPath, err)
 	}
 
 	// Dynamically align missing_fields schema enum and description with active config

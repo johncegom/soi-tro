@@ -31,9 +31,14 @@ func RenderResults(result *gemini.RentalExtractionResult, config *analyzer.Confi
 	table.SetColWidth(35)
 
 	// Load schema to get properties dynamically
-	schema, err := gemini.LoadSchema("schema.json")
+	schemaPath, err := analyzer.GetSchemaPath()
 	if err != nil {
-		fmt.Printf("⚠️  Không thể tải schema.json để hiển thị tiêu đề động: %v\n", err)
+		fmt.Printf("⚠️  Không thể lấy đường dẫn schema: %v\n", err)
+		return
+	}
+	schema, err := gemini.LoadSchema(schemaPath)
+	if err != nil {
+		fmt.Printf("⚠️  Không thể tải %s để hiển thị tiêu đề động: %v\n", schemaPath, err)
 	}
 
 	type displayField struct {

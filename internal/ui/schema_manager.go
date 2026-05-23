@@ -70,11 +70,15 @@ func ManageSchemaLoop() error {
 }
 
 func listFields() error {
-	schema, err := gemini.LoadSchema("schema.json")
+	schemaPath, err := analyzer.GetSchemaPath()
 	if err != nil {
 		return err
 	}
-	config, err := analyzer.LoadConfig("schema.json")
+	schema, err := gemini.LoadSchema(schemaPath)
+	if err != nil {
+		return err
+	}
+	config, err := analyzer.LoadConfig(schemaPath)
 	if err != nil {
 		return err
 	}
@@ -135,11 +139,15 @@ func listFields() error {
 }
 
 func addField() error {
-	schema, err := gemini.LoadSchema("schema.json")
+	schemaPath, err := analyzer.GetSchemaPath()
 	if err != nil {
 		return err
 	}
-	config, err := analyzer.LoadConfig("schema.json")
+	schema, err := gemini.LoadSchema(schemaPath)
+	if err != nil {
+		return err
+	}
+	config, err := analyzer.LoadConfig(schemaPath)
 	if err != nil {
 		return err
 	}
@@ -214,8 +222,8 @@ func addField() error {
 		config.RequiredFields = append(config.RequiredFields, key)
 	}
 
-	if err := gemini.SaveSchema("schema.json", schema, config.RequiredFields); err != nil {
-		return fmt.Errorf("không thể ghi schema.json: %w", err)
+	if err := gemini.SaveSchema(schemaPath, schema, config.RequiredFields); err != nil {
+		return fmt.Errorf("không thể ghi %s: %w", schemaPath, err)
 	}
 
 	fmt.Printf("\n✨ Đã thêm trường thông tin '%s' thành công!\n", key)
@@ -223,11 +231,15 @@ func addField() error {
 }
 
 func deleteField() error {
-	schema, err := gemini.LoadSchema("schema.json")
+	schemaPath, err := analyzer.GetSchemaPath()
 	if err != nil {
 		return err
 	}
-	config, err := analyzer.LoadConfig("schema.json")
+	schema, err := gemini.LoadSchema(schemaPath)
+	if err != nil {
+		return err
+	}
+	config, err := analyzer.LoadConfig(schemaPath)
 	if err != nil {
 		return err
 	}
@@ -285,7 +297,7 @@ func deleteField() error {
 	}
 	config.RequiredFields = newConfigReq
 
-	if err := gemini.SaveSchema("schema.json", schema, config.RequiredFields); err != nil {
+	if err := gemini.SaveSchema(schemaPath, schema, config.RequiredFields); err != nil {
 		return err
 	}
 
@@ -294,11 +306,15 @@ func deleteField() error {
 }
 
 func toggleFieldRequired() error {
-	schema, err := gemini.LoadSchema("schema.json")
+	schemaPath, err := analyzer.GetSchemaPath()
 	if err != nil {
 		return err
 	}
-	config, err := analyzer.LoadConfig("schema.json")
+	schema, err := gemini.LoadSchema(schemaPath)
+	if err != nil {
+		return err
+	}
+	config, err := analyzer.LoadConfig(schemaPath)
 	if err != nil {
 		return err
 	}
@@ -385,8 +401,8 @@ func toggleFieldRequired() error {
 	schema.Required = newSchemaReq
 
 	// 3. Save updates in schema.json
-	if err := gemini.SaveSchema("schema.json", schema, config.RequiredFields); err != nil {
-		return fmt.Errorf("lỗi khi lưu schema: %w", err)
+	if err := gemini.SaveSchema(schemaPath, schema, config.RequiredFields); err != nil {
+		return fmt.Errorf("lỗi khi lưu schema (%s): %w", schemaPath, err)
 	}
 
 	fmt.Println("\n✨ Đã lưu thay đổi trạng thái bắt buộc thành công!")
@@ -396,8 +412,12 @@ func toggleFieldRequired() error {
 // ConfigureExport lets the user set the export directory and max file size.
 // It is exported so it can be called directly from the main menu.
 func ConfigureExport() error {
+	schemaPath, err := analyzer.GetSchemaPath()
+	if err != nil {
+		return err
+	}
 	// Load current settings to pre-populate the form.
-	current, configured, err := gemini.LoadExportConfig("schema.json")
+	current, configured, err := gemini.LoadExportConfig(schemaPath)
 	if err != nil {
 		fmt.Printf("⚠️  Không thể tải cấu hình xuất hiện tại: %v\n", err)
 	}
@@ -483,8 +503,8 @@ func ConfigureExport() error {
 		return fmt.Errorf("không thể tạo thư mục xuất: %w", err)
 	}
 
-	if err := gemini.SaveExportConfig("schema.json", absDir, maxKB); err != nil {
-		return fmt.Errorf("không thể lưu cấu hình xuất: %w", err)
+	if err := gemini.SaveExportConfig(schemaPath, absDir, maxKB); err != nil {
+		return fmt.Errorf("không thể lưu cấu hình xuất (%s): %w", schemaPath, err)
 	}
 
 	fmt.Printf("\n✨ Đã lưu cấu hình xuất kết quả:\n")
