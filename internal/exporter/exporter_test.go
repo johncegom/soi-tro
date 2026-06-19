@@ -138,6 +138,44 @@ func TestWriteResultAndActiveFilePath(t *testing.T) {
 		is.FileExists(file1Path, "file 1 should exist at %q", file1Path)
 		is.FileExists(file2Path, "file 2 should exist at %q", file2Path)
 	})
+
+	t.Run("fails when directory creation fails", func(t *testing.T) {
+		t.Parallel()
+		is := assert.New(t)
+
+		tmpDir := t.TempDir()
+		filePath := filepath.Join(tmpDir, "some_file")
+		err := os.WriteFile(filePath, []byte("hello"), 0644)
+		require.NoError(t, err)
+
+		cfg := exporter.Config{
+			Dir:       filepath.Join(filePath, "sub"),
+			MaxSizeKB: 10,
+		}
+
+		err = exporter.WriteResult(cfg, &gemini.RentalExtractionResult{}, nil)
+		is.Error(err)
+		is.Contains(err.Error(), "failed to create export directory")
+	})
+
+	t.Run("fails when writing to a directory path", func(t *testing.T) {
+		t.Parallel()
+		is := assert.New(t)
+
+		tmpDir := t.TempDir()
+		cfg := exporter.Config{
+			Dir:       tmpDir,
+			MaxSizeKB: 10,
+		}
+
+		activePath := filepath.Join(tmpDir, "soi-tro-results-001.txt")
+		err := os.Mkdir(activePath, 0755)
+		require.NoError(t, err)
+
+		err = exporter.WriteResult(cfg, &gemini.RentalExtractionResult{}, nil)
+		is.Error(err)
+		is.Contains(err.Error(), "failed to open export file")
+	})
 }
 
 // ExampleDefaultConfig shows how to fetch the sensible default exporter configurations.

@@ -96,3 +96,90 @@ func TestEnsureSchemaFile(t *testing.T) {
 	is.NoError(err)
 	is.Equal(schemaPath, schemaPath2)
 }
+
+func TestEnsureGlobalAPIKey_EnvExists(t *testing.T) {
+	origKey := os.Getenv("GEMINI_API_KEY")
+	os.Setenv("GEMINI_API_KEY", "existing-env-key")
+	t.Cleanup(func() {
+		os.Setenv("GEMINI_API_KEY", origKey)
+	})
+
+	err := EnsureGlobalAPIKey()
+	assert.NoError(t, err)
+	assert.Equal(t, "existing-env-key", os.Getenv("GEMINI_API_KEY"))
+}
+
+func TestEnsureGlobalAPIKey_FromConfig(t *testing.T) {
+	_ = mockUserHomeDir(t)
+	origKey := os.Getenv("GEMINI_API_KEY")
+	os.Setenv("GEMINI_API_KEY", "")
+	t.Cleanup(func() {
+		os.Setenv("GEMINI_API_KEY", origKey)
+	})
+
+	testKey := "AIzaSyTestAPIKey999"
+	err := SaveGlobalAPIKey(testKey)
+	assert.NoError(t, err)
+
+	err = EnsureGlobalAPIKey()
+	assert.NoError(t, err)
+	assert.Equal(t, testKey, os.Getenv("GEMINI_API_KEY"))
+}
+
+func TestLoadGlobalAPIKey_InvalidJSON(t *testing.T) {
+	mockHome := mockUserHomeDir(t)
+	configPath := filepath.Join(mockHome, ".config", "soi-tro", "config.json")
+	err := os.MkdirAll(filepath.Dir(configPath), 0700)
+	assert.NoError(t, err)
+	err = os.WriteFile(configPath, []byte("invalid json"), 0600)
+	assert.NoError(t, err)
+
+	_, err = LoadGlobalAPIKey()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to parse global config JSON")
+}
+
+func TestGetSchemaPath_Error(t *testing.T) {
+	origHome := os.Getenv("HOME")
+	origUserProfile := os.Getenv("USERPROFILE")
+	origHomeDrive := os.Getenv("HOMEDRIVE")
+	origHomePath := os.Getenv("HOMEPATH")
+
+	os.Setenv("HOME", "")
+	os.Setenv("USERPROFILE", "")
+	os.Setenv("HOMEDRIVE", "")
+	os.Setenv("HOMEPATH", "")
+
+	t.Cleanup(func() {
+		os.Setenv("HOME", origHome)
+		os.Setenv("USERPROFILE", origUserProfile)
+		os.Setenv("HOMEDRIVE", origHomeDrive)
+		os.Setenv("HOMEPATH", origHomePath)
+	})
+
+	_, err := GetSchemaPath()
+	assert.Error(t, err)
+}
+
+func TestEnsureSchemaFile_Migration(t *testing.T) {
+	_ = mockUserHomeDir(t)
+	is := assert.New(t)
+
+	schemaPath, err := GetSchemaPath()
+	is.NoError(err)
+	err = os.MkdirAll(filepath.Dir(schemaPath), 0700)
+	is.NoError(err)
+
+	unsignedData := []byte(`{"type": "OBJECT", "properties": {}}`)
+	err = os.WriteFile(schemaPath, unsignedData, 0600)
+	is.NoError(err)
+
+	path, err := EnsureSchemaFile()
+	is.NoError(err)
+	is.Equal(schemaPath, path)
+
+	signedData, err := os.ReadFile(schemaPath)
+	is.NoError(err)
+	is.NoError(VerifySchema(signedData))
+}
+

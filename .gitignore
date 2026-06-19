@@ -27,6 +27,7 @@ coverage.txt
 *.njsproj
 *.sln
 *.sw?
+docs/
 
 # OS specific files
 Thumbs.db

@@ -2,6 +2,8 @@ package analyzer
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -65,6 +67,33 @@ func TestParseEnv(t *testing.T) {
 			is.Equal(tt.expected, got)
 		})
 	}
+}
+
+func TestLoadEnv(t *testing.T) {
+	// Test error when file does not exist
+	err := LoadEnv("non_existent_file.env")
+	assert.Error(t, err)
+
+	// Create a temp file with .env content
+	tmpDir := t.TempDir()
+	envFile := filepath.Join(tmpDir, ".env")
+	content := "TEST_KEY_LOAD_ENV=test_value\nANOTHER_TEST_KEY=\"another_value\"\n"
+	err = os.WriteFile(envFile, []byte(content), 0644)
+	assert.NoError(t, err)
+
+	// Clean up environment variables afterwards
+	t.Cleanup(func() {
+		os.Unsetenv("TEST_KEY_LOAD_ENV")
+		os.Unsetenv("ANOTHER_TEST_KEY")
+	})
+
+	// Load the env file
+	err = LoadEnv(envFile)
+	assert.NoError(t, err)
+
+	// Verify env vars are set
+	assert.Equal(t, "test_value", os.Getenv("TEST_KEY_LOAD_ENV"))
+	assert.Equal(t, "another_value", os.Getenv("ANOTHER_TEST_KEY"))
 }
 
 func FuzzParseEnv(f *testing.F) {

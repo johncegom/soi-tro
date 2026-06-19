@@ -1,3 +1,7 @@
+# AGENTS
+
+You must read the `docs/AGENTS.md` first.
+
 # Instructions for AI Coding Agents (Antigravity / Gemini / Claude / Codex)
 
 > [!IMPORTANT]
