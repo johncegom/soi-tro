@@ -72,6 +72,7 @@ func EnsureSchemaFile() (string, error) {
 // GlobalConfig represents the global system config format
 type GlobalConfig struct {
 	GeminiAPIKey string `json:"gemini_api_key"`
+	Model        string `json:"model,omitempty"`
 }
 
 // GetGlobalConfigPath returns the absolute path to ~/.config/soi-tro/config.json
@@ -115,6 +116,13 @@ func SaveGlobalAPIKey(key string) error {
 		return err
 	}
 
+	// Load existing configuration to preserve other fields (e.g. model)
+	var existing GlobalConfig
+	if fileRead, err := os.Open(configPath); err == nil {
+		_ = json.NewDecoder(fileRead).Decode(&existing)
+		fileRead.Close()
+	}
+
 	configDir := filepath.Dir(configPath)
 	// Security: Create the directory with 0o700 permissions (owner read/write/execute only)
 	if err := os.MkdirAll(configDir, 0o700); err != nil {
@@ -123,6 +131,7 @@ func SaveGlobalAPIKey(key string) error {
 
 	cfg := GlobalConfig{
 		GeminiAPIKey: strings.TrimSpace(key),
+		Model:        existing.Model,
 	}
 
 	// Security: Write the file with 0o600 permissions (owner read/write only) to protect the API key
@@ -138,6 +147,99 @@ func SaveGlobalAPIKey(key string) error {
 		return fmt.Errorf("failed to encode global config JSON: %w", err)
 	}
 
+	return nil
+}
+
+// GetGlobalModel returns the configured model from the global config file, or the default if not set/invalid
+func GetGlobalModel() string {
+	configPath, err := GetGlobalConfigPath()
+	if err != nil {
+		return "gemini-3.1-flash-lite"
+	}
+	file, err := os.Open(configPath)
+	if err != nil {
+		return "gemini-3.1-flash-lite"
+	}
+	defer file.Close()
+
+	var cfg GlobalConfig
+	decoder := json.NewDecoder(file)
+	if err := decoder.Decode(&cfg); err != nil {
+		return "gemini-3.1-flash-lite"
+	}
+	if cfg.Model == "" {
+		return "gemini-3.1-flash-lite"
+	}
+	return cfg.Model
+}
+
+// SaveGlobalModel writes the selected model into the global config, preserving other fields.
+func SaveGlobalModel(model string) error {
+	configPath, err := GetGlobalConfigPath()
+	if err != nil {
+		return err
+	}
+
+	var cfg GlobalConfig
+	file, err := os.Open(configPath)
+	if err == nil {
+		_ = json.NewDecoder(file).Decode(&cfg)
+		file.Close()
+	}
+
+	cfg.Model = strings.TrimSpace(model)
+
+	configDir := filepath.Dir(configPath)
+	if err := os.MkdirAll(configDir, 0o700); err != nil {
+		return fmt.Errorf("failed to create global config directory: %w", err)
+	}
+
+	fileWrite, err := os.OpenFile(configPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+	if err != nil {
+		return fmt.Errorf("failed to open global config file for writing: %w", err)
+	}
+	defer fileWrite.Close()
+
+	encoder := json.NewEncoder(fileWrite)
+	encoder.SetIndent("", "  ")
+	if err := encoder.Encode(&cfg); err != nil {
+		return fmt.Errorf("failed to encode global config JSON: %w", err)
+	}
+
+	return nil
+}
+
+// PromptAndSaveModel prompts the user to select their desired Gemini model and saves it.
+func PromptAndSaveModel() error {
+	var selectedModel string
+	form := huh.NewForm(
+		huh.NewGroup(
+			huh.NewSelect[string]().
+				Title("Chọn mô hình Gemini để sử dụng (Mặc định: gemini-3.1-flash-lite)").
+				Options(
+					huh.NewOption("Gemini 3.5 Flash (Khuyên dùng)", "gemini-3.5-flash"),
+					huh.NewOption("Gemini 3.1 Pro (Preview)", "gemini-3.1-pro-preview"),
+					huh.NewOption("Gemini 3.1 Flash-Lite (Cực nhanh & siêu rẻ)", "gemini-3.1-flash-lite"),
+					huh.NewOption("Gemini 2.5 Flash", "gemini-2.5-flash"),
+					huh.NewOption("Gemini 2.5 Pro", "gemini-2.5-pro"),
+				).
+				Value(&selectedModel),
+		),
+	)
+
+	if err := form.Run(); err != nil {
+		return fmt.Errorf("hủy bỏ chọn mô hình: %w", err)
+	}
+
+	if selectedModel == "" {
+		selectedModel = "gemini-3.1-flash-lite"
+	}
+
+	if err := SaveGlobalModel(selectedModel); err != nil {
+		return fmt.Errorf("không thể lưu mô hình: %w", err)
+	}
+
+	fmt.Printf("\n✨ Đã thiết lập mô hình sử dụng thành công: %s\n\n", selectedModel)
 	return nil
 }
 
@@ -202,6 +304,11 @@ func EnsureGlobalAPIKey() error {
 	fmt.Println("Ứng dụng sẽ tự động sử dụng khóa này từ nay về sau!")
 	fmt.Println("=========================================================================")
 	fmt.Println()
+
+	// Prompt the user for model choice immediately after API Key config
+	if err := PromptAndSaveModel(); err != nil {
+		fmt.Printf("⚠️ Không thể thiết lập mô hình, sẽ sử dụng mặc định (gemini-3.1-flash-lite): %v\n", err)
+	}
 
 	return nil
 }

@@ -183,3 +183,33 @@ func TestEnsureSchemaFile_Migration(t *testing.T) {
 	is.NoError(VerifySchema(signedData))
 }
 
+func TestGetAndSaveGlobalModel(t *testing.T) {
+	_ = mockUserHomeDir(t)
+	is := assert.New(t)
+
+	// 1. Default model when file does not exist
+	is.Equal("gemini-3.1-flash-lite", GetGlobalModel())
+
+	// 2. Save and load model
+	err := SaveGlobalModel("gemini-3.5-flash")
+	is.NoError(err)
+	is.Equal("gemini-3.5-flash", GetGlobalModel())
+
+	// 3. Verify API Key is preserved when saving model, and vice-versa
+	err = SaveGlobalAPIKey("AIzaSyPreservedKey")
+	is.NoError(err)
+	is.Equal("gemini-3.5-flash", GetGlobalModel())
+
+	key, err := LoadGlobalAPIKey()
+	is.NoError(err)
+	is.Equal("AIzaSyPreservedKey", key)
+
+	err = SaveGlobalModel("gemini-2.5-pro")
+	is.NoError(err)
+	is.Equal("gemini-2.5-pro", GetGlobalModel())
+
+	key, err = LoadGlobalAPIKey()
+	is.NoError(err)
+	is.Equal("AIzaSyPreservedKey", key)
+}
+

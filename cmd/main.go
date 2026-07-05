@@ -52,7 +52,8 @@ func main() {
 						huh.NewOption("2. Xem lịch sử & So sánh phòng trọ", "history"),
 						huh.NewOption("3. Quản lý các trường thông tin (Schema)", "manage"),
 						huh.NewOption("4. Cài đặt xuất kết quả (Export)", "export"),
-						huh.NewOption("5. Thoát", "exit"),
+						huh.NewOption("5. Cấu hình mô hình Gemini (Model)", "model"),
+						huh.NewOption("6. Thoát", "exit"),
 					).
 					Value(&mainChoice),
 			),
@@ -87,6 +88,13 @@ func main() {
 		if mainChoice == "export" {
 			if err := ui.ConfigureExport(); err != nil {
 				fmt.Printf("❌ Lỗi cài đặt xuất kết quả: %v\n", err)
+			}
+			continue
+		}
+
+		if mainChoice == "model" {
+			if err := analyzer.PromptAndSaveModel(); err != nil {
+				fmt.Printf("❌ Lỗi cấu hình mô hình: %v\n", err)
 			}
 			continue
 		}
@@ -155,7 +163,8 @@ func main() {
 				}
 
 				// 4. Send the payload to Gemini and run extraction
-				fmt.Println("\n🤖 Đang phân tích tin thông tin bằng Gemini 3.1 Flash-Lite... Vui lòng đợi.")
+				modelName := analyzer.GetGlobalModel()
+				fmt.Printf("\n🤖 Đang phân tích thông tin bằng %s... Vui lòng đợi.\n", modelName)
 				result, err := client.ExtractRentalInfo(ctx, inputRes.Text, imageBytes, mimeType, cfg.RequiredFields)
 				if err != nil {
 					fmt.Printf("\n❌ Lỗi phân tích tin đăng qua Gemini API: %v\n", err)

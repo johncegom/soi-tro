@@ -128,7 +128,8 @@ Tin nhắn mẫu (trong 'sample_messages', chính xác 2 tin):
 		},
 	}
 
-	resp, err := c.genaiClient.Models.GenerateContent(ctx, "gemini-3.1-flash-lite", contents, config)
+	modelName := analyzer.GetGlobalModel()
+	resp, err := c.genaiClient.Models.GenerateContent(ctx, modelName, contents, config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate content from Gemini API: %w", err)
 	}
