@@ -39,3 +39,8 @@ tasks:
     desc: Run all tests with the race detector enabled (requires CGO)
     cmds:
       - go test -v -race ./...
+
+  tag:
+    desc: Auto-increment patch version tag and push (options: minor, major)
+    cmds:
+      - go run scripts/release.go {{.CLI_ARGS}}
