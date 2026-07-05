@@ -35,7 +35,7 @@ This document details the test coverage analysis of the `soi-tro` repository. Th
 | └─ `schema_manager.go` | *All functions* | 0.0% | Drives terminal schema management wizard. |
 | **`soi-tro/internal/gemini`** | | **40.7%** | |
 | └─ `client.go` | `NewClient` | 0.0% | Depends on live `GEMINI_API_KEY` env var. |
-| | `ExtractRentalInfo` | 0.0% | Interacts with live Gemini 2.5 Flash API endpoint. |
+| | `ExtractRentalInfo` | 0.0% | Interacts with live Gemini 3.1 Flash-Lite API endpoint. |
 | | `LoadSchema` | 66.7% | Tested using mock home directories. |
 | | `SaveSchema` | 76.0% | Tested using mock home directories. |
 | | `LoadExportConfig` | 64.3% | Tested using mock home directories. |

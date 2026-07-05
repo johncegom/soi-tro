@@ -55,7 +55,7 @@ func NewClient(ctx context.Context) (*Client, error) {
 	}, nil
 }
 
-// ExtractRentalInfo performs the parsing using the gemini-2.5-flash model.
+// ExtractRentalInfo performs the parsing using the gemini-3.1-flash-lite model.
 func (c *Client) ExtractRentalInfo(ctx context.Context, text string, imageBytes []byte, imageMIME string, requiredFields []string) (*RentalExtractionResult, error) {
 	var parts []*genai.Part
 
@@ -128,7 +128,7 @@ Tin nhắn mẫu (trong 'sample_messages', chính xác 2 tin):
 		},
 	}
 
-	resp, err := c.genaiClient.Models.GenerateContent(ctx, "gemini-2.5-flash", contents, config)
+	resp, err := c.genaiClient.Models.GenerateContent(ctx, "gemini-3.1-flash-lite", contents, config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate content from Gemini API: %w", err)
 	}

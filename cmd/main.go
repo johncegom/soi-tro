@@ -155,7 +155,7 @@ func main() {
 				}
 
 				// 4. Send the payload to Gemini and run extraction
-				fmt.Println("\n🤖 Đang phân tích tin thông tin bằng Gemini 2.5 Flash... Vui lòng đợi.")
+				fmt.Println("\n🤖 Đang phân tích tin thông tin bằng Gemini 3.1 Flash-Lite... Vui lòng đợi.")
 				result, err := client.ExtractRentalInfo(ctx, inputRes.Text, imageBytes, mimeType, cfg.RequiredFields)
 				if err != nil {
 					fmt.Printf("\n❌ Lỗi phân tích tin đăng qua Gemini API: %v\n", err)

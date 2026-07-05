@@ -1,6 +1,6 @@
 # 🚀 Soi Trọ - Công cụ Phân tích & Trích xuất Tin đăng Thuê phòng bằng AI
 
-**Soi Trọ** là một công cụ dòng lệnh (CLI) mạnh mẽ, hiện đại được viết bằng ngôn ngữ Go (Golang). Công cụ này tích hợp mô hình ngôn ngữ lớn đa phương thức **Gemini 2.5 Flash** để tự động phân tích, trích xuất cấu trúc và chuẩn hóa thông tin từ các tin đăng cho thuê phòng trọ hoặc căn hộ dịch vụ tại Việt Nam (hỗ trợ cả định dạng văn bản lẫn hình ảnh chụp màn hình).
+**Soi Trọ** là một công cụ dòng lệnh (CLI) mạnh mẽ, hiện đại được viết bằng ngôn ngữ Go (Golang). Công cụ này tích hợp mô hình ngôn ngữ lớn đa phương thức **Gemini 3.1 Flash-Lite** để tự động phân tích, trích xuất cấu trúc và chuẩn hóa thông tin từ các tin đăng cho thuê phòng trọ hoặc căn hộ dịch vụ tại Việt Nam (hỗ trợ cả định dạng văn bản lẫn hình ảnh chụp màn hình).
 
 Ứng dụng giúp người tìm phòng trọ phát hiện nhanh các "khoảng trống thông tin" (thiếu giá điện, nước, cọc, máy giặt, v.v.), tự động sao chép số điện thoại hoặc soạn sẵn tin nhắn hỏi chủ nhà cực kỳ tiện lợi chỉ với vài phím bấm.
 
@@ -34,7 +34,7 @@ graph TD
     D --> F
     E --> F
     F -->|2. Lấy cấu hình và OpenAPI Schema| G[schema.json]
-    F -->|3. Gửi payload đến model gemini-2.5-flash| H[Gemini API]
+    F -->|3. Gửi payload đến model gemini-3.1-flash-lite| H[Gemini API]
     H -->|4. Trả về kết quả JSON chuẩn hóa| F
     F -->|5. Trả về cấu trúc RentalExtractionResult| I(ui.RenderResults)
     I -->|6. Hiển thị bảng đối chiếu và phân tích thiếu| J[Terminal UI]
@@ -51,7 +51,7 @@ graph TD
 ## 🛠️ Công Nghệ Sử Dụng
 
 - **Ngôn ngữ lập trình:** Go (Golang) 1.22+
-- **AI Core:** Official **Google GenAI Go SDK** (`google.golang.org/genai`) powered by `gemini-2.5-flash`.
+- **AI Core:** Official **Google GenAI Go SDK** (`google.golang.org/genai`) powered by `gemini-3.1-flash-lite`.
 - **Giao diện Dòng lệnh (TUI):**
   - [Charm Bracelet Huh?](https://github.com/charmbracelet/huh) & [Bubble Tea](https://github.com/charmbracelet/bubbletea) cho các biểu mẫu nhập liệu và menu điều hướng bằng phím mũi tên.
   - [tablewriter](https://github.com/olekukonko/tablewriter) để kết xuất bảng biểu trực quan đẹp mắt.
