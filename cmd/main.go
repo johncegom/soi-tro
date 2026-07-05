@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"soi-tro/internal/analyzer"
+	"soi-tro/internal/database"
 	"soi-tro/internal/exporter"
 	"soi-tro/internal/gemini"
 	"soi-tro/internal/ui"
@@ -19,6 +20,11 @@ import (
 func main() {
 	// Load environment variables from the secure .env file
 	_ = analyzer.LoadEnv(".env")
+
+	// Initialize the history database
+	if err := database.InitDB(); err != nil {
+		log.Fatalf("❌ Lỗi khởi tạo cơ sở dữ liệu lịch sử: %v", err)
+	}
 
 	// Ensure GEMINI_API_KEY is available (check env, load from global config, or prompt)
 	if err := analyzer.EnsureGlobalAPIKey(); err != nil {
@@ -43,9 +49,10 @@ func main() {
 					Title("BẢNG ĐIỀU KHIỂN - SOI TRỌ").
 					Options(
 						huh.NewOption("1. Phân tích tin đăng mới", "analyze"),
-						huh.NewOption("2. Quản lý các trường thông tin (Schema)", "manage"),
-						huh.NewOption("3. Cài đặt xuất kết quả (Export)", "export"),
-						huh.NewOption("4. Thoát", "exit"),
+						huh.NewOption("2. Xem lịch sử & So sánh phòng trọ", "history"),
+						huh.NewOption("3. Quản lý các trường thông tin (Schema)", "manage"),
+						huh.NewOption("4. Cài đặt xuất kết quả (Export)", "export"),
+						huh.NewOption("5. Thoát", "exit"),
 					).
 					Value(&mainChoice),
 			),
@@ -61,6 +68,13 @@ func main() {
 		if mainChoice == "exit" {
 			fmt.Println("\nCảm ơn bạn đã sử dụng Soi Trọ! Tạm biệt.")
 			break
+		}
+
+		if mainChoice == "history" {
+			if err := ui.ShowHistoryAndCompareMenu(); err != nil {
+				fmt.Printf("❌ Lỗi hiển thị lịch sử: %v\n", err)
+			}
+			continue
 		}
 
 		if mainChoice == "manage" {
@@ -157,6 +171,9 @@ func main() {
 
 				// 5. Format and print the final compliance table & handle clipboard copying
 				ui.RenderResults(result, cfg)
+				if dbID, dbErr := database.SaveRental(result); dbErr == nil {
+					fmt.Printf("💾 Đã lưu kết quả phân tích vào lịch sử (Mã số: #%d)\n", dbID)
+				}
 				fmt.Println()
 
 				// 6. Load export config once to determine if export option should be shown.

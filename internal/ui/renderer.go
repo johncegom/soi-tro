@@ -7,7 +7,9 @@ import (
 
 	"github.com/atotto/clipboard"
 	"github.com/olekukonko/tablewriter"
+	"google.golang.org/genai"
 	"soi-tro/internal/analyzer"
+	"soi-tro/internal/database"
 	"soi-tro/internal/gemini"
 )
 
@@ -183,5 +185,135 @@ func RenderResults(result *gemini.RentalExtractionResult, config *analyzer.Confi
 		}
 	}
 
+	fmt.Println("=========================================================================")
+}
+
+// RenderComparisonTable displays 2 or 3 rental records side by side in a formatted table
+func RenderComparisonTable(records []database.RentalRecord) {
+	fmt.Println("\n=========================================================================")
+	fmt.Println("                       SO SÁNH PHÒNG TRỌ SONG SONG                       ")
+	fmt.Println("=========================================================================")
+
+	table := tablewriter.NewWriter(os.Stdout)
+	
+	headers := []string{"Tiêu chí"}
+	for i, rec := range records {
+		headers = append(headers, fmt.Sprintf("Phòng %d (ID: %d)", i+1, rec.ID))
+	}
+	table.SetHeader(headers)
+	table.SetAutoWrapText(true)
+	table.SetRowLine(true)
+	table.SetColWidth(30)
+
+	schemaPath, err := analyzer.GetSchemaPath()
+	var schema *genai.Schema
+	if err == nil {
+		schema, _ = gemini.LoadSchema(schemaPath)
+	}
+
+	type compareField struct {
+		name string
+		key  string
+	}
+	var fields []compareField
+
+	if schema != nil && len(schema.Properties) > 0 {
+		standardOrder := []string{"price", "deposit", "floor", "parking_fee", "pets_allowed", "electricity", "water"}
+		seen := make(map[string]bool)
+
+		for _, k := range standardOrder {
+			if prop, exists := schema.Properties[k]; exists {
+				title := prop.Title
+				if title == "" {
+					title = k
+				}
+				fields = append(fields, compareField{name: title, key: k})
+				seen[k] = true
+			}
+		}
+
+		for k, prop := range schema.Properties {
+			if k == "missing_fields" || k == "sample_messages" || k == "additional_notes" || k == "phone_number" {
+				continue
+			}
+			if !seen[k] {
+				title := prop.Title
+				if title == "" {
+					title = k
+				}
+				fields = append(fields, compareField{name: title, key: k})
+			}
+		}
+	} else {
+		fields = []compareField{
+			{"Giá thuê", "price"},
+			{"Tiền đặt cọc", "deposit"},
+			{"Số tầng / Lầu", "floor"},
+			{"Phí giữ xe", "parking_fee"},
+			{"Cho nuôi thú cưng", "pets_allowed"},
+			{"Tiền điện", "electricity"},
+			{"Tiền nước", "water"},
+		}
+	}
+
+	rowDate := []string{"Ngày phân tích"}
+	for _, rec := range records {
+		rowDate = append(rowDate, rec.CreatedAt)
+	}
+	table.Append(rowDate)
+
+	rowPhone := []string{"Liên hệ chủ nhà"}
+	for _, rec := range records {
+		phone := rec.Result.PhoneNumber
+		if phone == "" {
+			phone = "Không đề cập"
+		}
+		rowPhone = append(rowPhone, phone)
+	}
+	table.Append(rowPhone)
+
+	for _, field := range fields {
+		row := []string{field.name}
+		for _, rec := range records {
+			val := rec.Result.RawFields[field.key]
+			if val == "" {
+				val = "Không đề cập"
+			}
+			row = append(row, val)
+		}
+		table.Append(row)
+	}
+
+	rowMissing := []string{"Thiếu thông tin"}
+	for _, rec := range records {
+		var missingLabels []string
+		for _, m := range rec.Result.MissingFields {
+			lbl := m
+			if schema != nil {
+				if prop, exists := schema.Properties[strings.ToLower(m)]; exists && prop.Title != "" {
+					lbl = prop.Title
+				}
+			}
+			missingLabels = append(missingLabels, lbl)
+		}
+		if len(missingLabels) == 0 {
+			rowMissing = append(rowMissing, "Đầy đủ")
+		} else {
+			rowMissing = append(rowMissing, strings.Join(missingLabels, ", "))
+		}
+	}
+	table.Append(rowMissing)
+
+	rowNotes := []string{"Ghi chú thêm"}
+	for _, rec := range records {
+		notes := rec.Result.AdditionalNotes
+		if notes == "" || notes == "Không đề cập" {
+			notes = "-"
+		}
+		rowNotes = append(rowNotes, notes)
+	}
+	table.Append(rowNotes)
+
+	table.Render()
 	fmt.Println("=========================================================================")
 }
