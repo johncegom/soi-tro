@@ -87,6 +87,21 @@ soi-tro/
 
 ## 🚀 Hướng Dẫn Cài Đặt & Sử Dụng
 
+### 0. Dành cho người dùng không chuyên kỹ thuật (Không cần cài đặt Go)
+
+Bạn không cần cài đặt ngôn ngữ Go hay biên dịch mã nguồn, chỉ cần làm theo các bước sau để tải và chạy trực tiếp ứng dụng:
+
+1. Truy cập vào mục **[Releases](https://github.com/johncegom/soi-tro/releases)** trên trang GitHub của dự án này.
+2. Tải về phiên bản nén phù hợp với hệ điều hành của bạn:
+   * **Windows:** Tải file `soi-tro-windows-amd64.zip`.
+   * **macOS:** Tải file `soi-tro-darwin-arm64.tar.gz` (nếu dùng chip Apple Silicon M1/M2/M3) hoặc `soi-tro-darwin-amd64.tar.gz` (nếu dùng chip Intel).
+   * **Linux:** Tải file `soi-tro-linux-amd64.tar.gz`.
+3. Giải nén file vừa tải về.
+4. Chạy ứng dụng:
+   * **Trên Windows:** Double-click trực tiếp vào file `soi-tro.exe`.
+   * **Trên macOS / Linux:** Mở ứng dụng Terminal, kéo thả file `soi-tro` đã giải nén vào cửa sổ Terminal và nhấn Enter (hoặc chạy lệnh `./soi-tro`). 
+     * *Lưu ý trên macOS:* Nếu hệ thống báo lỗi không thể xác minh nhà phát triển, bạn hãy click chuột phải vào file `soi-tro` -> chọn **Open**, hoặc truy cập **System Settings > Privacy & Security** để cho phép mở file.
+
 ### 1. Yêu cầu hệ thống
 - Máy tính đã cài đặt **Go (Golang)** phiên bản **1.22** trở lên.
 - Một **Gemini API Key** hoạt động (bạn có thể nhận miễn phí tại [Google AI Studio](https://aistudio.google.com/)).
