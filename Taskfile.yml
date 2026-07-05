@@ -41,6 +41,6 @@ tasks:
       - go test -v -race ./...
 
   tag:
-    desc: Auto-increment patch version tag and push (options: minor, major)
+    desc: "Auto-increment patch version tag and push (options: minor, major)"
     cmds:
       - go run scripts/release.go {{.CLI_ARGS}}
