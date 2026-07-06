@@ -36,9 +36,16 @@ Tài liệu này đề xuất lộ trình và kế hoạch chi tiết để tíc
   - *Trạng thái*: Lập kế hoạch.
   - *Phụ thuộc*: Không phụ thuộc.
 
+- [x] [CONFIRMED] **Task 6: Hệ Thống Logging & Observability (Logging & Observability System)**
+  - *Mô tả*: Tích hợp hệ thống logging có cấu trúc và observability để giúp phát hiện lỗi nhanh chóng và cải thiện quy trình debug cho developer.
+  - *Giải pháp kỹ thuật*: Sử dụng Go's `log/slog` cho structured logging, custom error types với error codes, context propagation cho request tracing, file logging với rotation, và configurable log levels. Xem chi tiết trong `logging-observability-plan.md`.
+  - *Trạng thái*: Hoàn thành (Phase 1 & 2 - Core infrastructure and main.go integration).
+  - *Phụ thuộc*: Không phụ thuộc.
+
 ---
 
 ## 🛠️ Kế Hoạch Triển Khai Tiếp Theo (Next Steps)
 1. **Bước 1**: Nhận sự chấp thuận cho cấu trúc tài liệu mới.
 2. **Bước 2**: Thực hiện tích hợp tính năng **Task 1 (Lưu trữ SQLite)** làm bước đệm đầu tiên (đang bị chặn do Task 3 phụ thuộc vào Task 1).
 3. **Bước 3**: Triển khai tính năng **Task 3 (So sánh song song)** sau khi Task 1 hoàn tất.
+4. **Bước 4**: Triển khai tính năng **Task 6 (Logging & Observability)** để cải thiện khả năng debug và monitoring cho toàn bộ ứng dụng.
