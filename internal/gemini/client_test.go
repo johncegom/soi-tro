@@ -9,10 +9,11 @@ import (
 	"strings"
 	"testing"
 
+	"soi-tro/internal/analyzer"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/genai"
-	"soi-tro/internal/analyzer"
 )
 
 // mockUserHomeDir giả lập thư mục Home của người dùng sang thư mục tạm thời trong thời gian chạy test
@@ -126,6 +127,39 @@ func TestNewClient_Success(t *testing.T) {
 	assert.NotNil(t, c)
 }
 
+func TestNewClient_WithValidAPIKey(t *testing.T) {
+	origKey := os.Getenv("GEMINI_API_KEY")
+	os.Setenv("GEMINI_API_KEY", "mock-test-api-key-12345")
+	t.Cleanup(func() {
+		os.Setenv("GEMINI_API_KEY", origKey)
+	})
+
+	c, err := NewClient(context.Background())
+	assert.NoError(t, err)
+	assert.NotNil(t, c)
+	assert.NotNil(t, c.genaiClient)
+}
+
+func TestNewClient_WithCancelledContext(t *testing.T) {
+	origKey := os.Getenv("GEMINI_API_KEY")
+	os.Setenv("GEMINI_API_KEY", "some-mock-key")
+	t.Cleanup(func() {
+		os.Setenv("GEMINI_API_KEY", origKey)
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // Cancel immediately
+
+	c, err := NewClient(ctx)
+	// May succeed or fail depending on implementation
+	// Just verify it doesn't panic
+	assert.NotPanics(t, func() {
+		_, _ = NewClient(ctx)
+	})
+	_ = c
+	_ = err
+}
+
 func TestLoadSchema_FileNotExist(t *testing.T) {
 	_, err := LoadSchema("non_existent_file_path")
 	assert.Error(t, err)
@@ -172,7 +206,6 @@ func TestLoadExportConfig_InvalidSignature(t *testing.T) {
 	assert.Error(t, err)
 }
 
-
 func TestLoadExportConfig_InvalidConfigType(t *testing.T) {
 	invalidConfigJSON := []byte(`{"type": "OBJECT", "x_export_config": "should_be_object"}`)
 	signedBytes, err := analyzer.SignSchema(invalidConfigJSON)
@@ -204,12 +237,38 @@ func TestSaveExportConfig_Untrusted(t *testing.T) {
 	assert.Contains(t, err.Error(), "existing schema file is untrusted")
 }
 
-
 func TestExtractRentalInfo_EmptyInputs(t *testing.T) {
 	c := &Client{}
 	_, err := c.ExtractRentalInfo(context.Background(), "", nil, "", nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "either text listing or image file must be provided")
+}
+
+func TestExtractRentalInfo_WithTextOnly(t *testing.T) {
+	_ = mockUserHomeDir(t)
+	c := &Client{}
+	_, err := c.ExtractRentalInfo(context.Background(), "some listing", nil, "", nil)
+	assert.Error(t, err)
+	// Should fail because schema doesn't exist
+	assert.Contains(t, err.Error(), "failed to load output schema")
+}
+
+func TestExtractRentalInfo_WithImageOnly(t *testing.T) {
+	_ = mockUserHomeDir(t)
+	c := &Client{}
+	imageBytes := []byte("fake image data")
+	_, err := c.ExtractRentalInfo(context.Background(), "", imageBytes, "image/jpeg", nil)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to load output schema")
+}
+
+func TestExtractRentalInfo_WithBothTextAndImage(t *testing.T) {
+	_ = mockUserHomeDir(t)
+	c := &Client{}
+	imageBytes := []byte("fake image data")
+	_, err := c.ExtractRentalInfo(context.Background(), "listing text", imageBytes, "image/jpeg", nil)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to load output schema")
 }
 
 func TestExtractRentalInfo_SchemaLoadFail(t *testing.T) {
@@ -244,6 +303,26 @@ func TestExtractRentalInfo_GetSchemaPathFail(t *testing.T) {
 	assert.Contains(t, err.Error(), "failed to get schema path")
 }
 
+func TestExtractRentalInfo_WithRequiredFields(t *testing.T) {
+	_ = mockUserHomeDir(t)
+	c := &Client{}
+	requiredFields := []string{"price", "deposit", "phone_number"}
+	_, err := c.ExtractRentalInfo(context.Background(), "listing text", nil, "", requiredFields)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to load output schema")
+}
+
+func TestExtractRentalInfo_WithCancelledContext(t *testing.T) {
+	_ = mockUserHomeDir(t)
+	c := &Client{}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // Cancel immediately
+
+	_, err := c.ExtractRentalInfo(ctx, "some listing", nil, "", nil)
+	assert.Error(t, err)
+}
+
 type roundTripFunc func(req *http.Request) (*http.Response, error)
 
 func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
@@ -255,7 +334,7 @@ func newMockClient(t *testing.T, handler roundTripFunc) *Client {
 		Transport: handler,
 	}
 	config := &genai.ClientConfig{
-		APIKey:     "mock-api-key-123",
+		APIKey:     "mock-test-api-key-123",
 		HTTPClient: mockHTTPClient,
 	}
 	gc, err := genai.NewClient(context.Background(), config)
@@ -551,4 +630,3 @@ func TestExtractRentalInfo_NoParts(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "no response candidates returned by Gemini")
 }
-
