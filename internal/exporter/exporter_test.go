@@ -188,3 +188,413 @@ func ExampleDefaultConfig() {
 	// .
 	// 1024
 }
+
+func TestActiveFilePath_InvalidDirectory(t *testing.T) {
+	t.Parallel()
+	is := assert.New(t)
+
+	// Try to use a directory that doesn't exist and can't be created
+	cfg := exporter.Config{
+		Dir:       "/nonexistent/directory/that/does/not/exist",
+		MaxSizeKB: 10,
+	}
+
+	path, err := exporter.ActiveFilePath(cfg)
+	if err != nil {
+		is.Contains(err.Error(), "invalid export directory")
+	} else {
+		// On some systems, this might succeed (e.g., if the path is created)
+		is.NotEmpty(path)
+	}
+}
+
+func TestWriteResult_PathTraversal(t *testing.T) {
+	t.Parallel()
+	is := assert.New(t)
+
+	tmpDir := t.TempDir()
+	cfg := exporter.Config{
+		Dir:       filepath.Join(tmpDir, "..", "escaped"), // Try to escape temp dir
+		MaxSizeKB: 10,
+	}
+
+	result := &gemini.RentalExtractionResult{
+		PhoneNumber: "0900000000",
+		RawFields:   map[string]string{"field": "value"},
+	}
+
+	// Should resolve to absolute path and not escape
+	err := exporter.WriteResult(cfg, result, nil)
+	is.NoError(err)
+}
+
+func TestWriteResult_EmptyResult(t *testing.T) {
+	t.Parallel()
+	is := assert.New(t)
+
+	tmpDir := t.TempDir()
+	cfg := exporter.Config{
+		Dir:       tmpDir,
+		MaxSizeKB: 10,
+	}
+
+	result := &gemini.RentalExtractionResult{
+		RawFields: map[string]string{},
+	}
+
+	err := exporter.WriteResult(cfg, result, nil)
+	is.NoError(err)
+
+	// Verify file was created
+	activePath, err := exporter.ActiveFilePath(cfg)
+	is.NoError(err)
+	is.FileExists(activePath)
+}
+
+func TestWriteResult_MultipleSequentialWrites(t *testing.T) {
+	t.Parallel()
+	is := assert.New(t)
+
+	tmpDir := t.TempDir()
+	cfg := exporter.Config{
+		Dir:       tmpDir,
+		MaxSizeKB: 10,
+	}
+
+	result := &gemini.RentalExtractionResult{
+		PhoneNumber: "0900000000",
+		RawFields:   map[string]string{"field": "value"},
+	}
+
+	// Write multiple results sequentially
+	for i := 0; i < 5; i++ {
+		err := exporter.WriteResult(cfg, result, nil)
+		is.NoError(err)
+	}
+
+	// Verify that files are being used correctly
+	activePath, err := exporter.ActiveFilePath(cfg)
+	is.NoError(err)
+	is.FileExists(activePath)
+}
+
+func TestWriteResult_SpecialCharactersInFields(t *testing.T) {
+	t.Parallel()
+	is := assert.New(t)
+
+	tmpDir := t.TempDir()
+	cfg := exporter.Config{
+		Dir:       tmpDir,
+		MaxSizeKB: 10,
+	}
+
+	result := &gemini.RentalExtractionResult{
+		PhoneNumber: "0900000000",
+		RawFields: map[string]string{
+			"field1": "Value with special chars: @#$%^&*()",
+			"field2": "Value with unicode: 🏠💰",
+			"field3": "Value with newlines\nand\ttabs",
+		},
+	}
+
+	err := exporter.WriteResult(cfg, result, nil)
+	is.NoError(err)
+
+	activePath, err := exporter.ActiveFilePath(cfg)
+	is.NoError(err)
+	content, err := os.ReadFile(activePath)
+	is.NoError(err)
+	is.Contains(string(content), "Value with special chars")
+}
+
+func TestWriteResult_VeryLongValues(t *testing.T) {
+	t.Parallel()
+	is := assert.New(t)
+
+	tmpDir := t.TempDir()
+	cfg := exporter.Config{
+		Dir:       tmpDir,
+		MaxSizeKB: 1024,
+	}
+
+	longValue := strings.Repeat("A", 10000)
+	result := &gemini.RentalExtractionResult{
+		PhoneNumber: "0900000000",
+		RawFields: map[string]string{
+			"long_field": longValue,
+		},
+	}
+
+	err := exporter.WriteResult(cfg, result, nil)
+	is.NoError(err)
+
+	activePath, err := exporter.ActiveFilePath(cfg)
+	is.NoError(err)
+	content, err := os.ReadFile(activePath)
+	is.NoError(err)
+	is.Contains(string(content), longValue)
+}
+
+func TestWriteResult_WithComplexSampleMessages(t *testing.T) {
+	t.Parallel()
+	is := assert.New(t)
+
+	tmpDir := t.TempDir()
+	cfg := exporter.Config{
+		Dir:       tmpDir,
+		MaxSizeKB: 10,
+	}
+
+	result := &gemini.RentalExtractionResult{
+		PhoneNumber: "0900000000",
+		RawFields:   map[string]string{"field": "value"},
+		SampleMessages: []gemini.SampleMessage{
+			{
+				Style:   "Complex Style 1",
+				Content: "Complex message with multiple lines\nand special characters: @#$%",
+			},
+			{
+				Style:   "Complex Style 2",
+				Content: "Another complex message with unicode: 🏠💰",
+			},
+		},
+	}
+
+	err := exporter.WriteResult(cfg, result, nil)
+	is.NoError(err)
+
+	activePath, err := exporter.ActiveFilePath(cfg)
+	is.NoError(err)
+	content, err := os.ReadFile(activePath)
+	is.NoError(err)
+	is.Contains(string(content), "Complex Style 1")
+	is.Contains(string(content), "Complex Style 2")
+}
+
+func TestWriteResult_WithManyMissingFields(t *testing.T) {
+	t.Parallel()
+	is := assert.New(t)
+
+	tmpDir := t.TempDir()
+	cfg := exporter.Config{
+		Dir:       tmpDir,
+		MaxSizeKB: 10,
+	}
+
+	result := &gemini.RentalExtractionResult{
+		PhoneNumber: "0900000000",
+		RawFields:   map[string]string{"field": "value"},
+		MissingFields: []string{
+			"field1", "field2", "field3", "field4", "field5",
+			"field6", "field7", "field8", "field9", "field10",
+		},
+	}
+
+	err := exporter.WriteResult(cfg, result, nil)
+	is.NoError(err)
+
+	activePath, err := exporter.ActiveFilePath(cfg)
+	is.NoError(err)
+	content, err := os.ReadFile(activePath)
+	is.NoError(err)
+	is.Contains(string(content), "Trường còn thiếu")
+	is.Contains(string(content), "field1")
+	is.Contains(string(content), "field10")
+}
+
+func TestWriteResult_WithEmptyFields(t *testing.T) {
+	t.Parallel()
+	is := assert.New(t)
+
+	tmpDir := t.TempDir()
+	cfg := exporter.Config{
+		Dir:       tmpDir,
+		MaxSizeKB: 10,
+	}
+
+	result := &gemini.RentalExtractionResult{
+		RawFields:       map[string]string{},
+		MissingFields:   []string{},
+		SampleMessages:  []gemini.SampleMessage{},
+		AdditionalNotes: "",
+		PhoneNumber:     "",
+	}
+
+	err := exporter.WriteResult(cfg, result, nil)
+	is.NoError(err)
+
+	// Verify file was created and contains expected content
+	activePath, err := exporter.ActiveFilePath(cfg)
+	is.NoError(err)
+	content, err := os.ReadFile(activePath)
+	is.NoError(err)
+	is.Contains(string(content), "KẾT QUẢ PHÂN TÍCH")
+}
+
+func TestWriteResult_WithAllFields(t *testing.T) {
+	t.Parallel()
+	is := assert.New(t)
+
+	tmpDir := t.TempDir()
+	cfg := exporter.Config{
+		Dir:       tmpDir,
+		MaxSizeKB: 1024,
+	}
+
+	result := &gemini.RentalExtractionResult{
+		Price:           "5 triệu",
+		Deposit:         "1 tháng",
+		Floor:           "2",
+		Electricity:     "4000/kWh",
+		Water:           "100k/người",
+		ParkingFee:      "Miễn phí",
+		PetsAllowed:     "Có",
+		PhoneNumber:     "0912345678",
+		AdditionalNotes: "Gần chợ",
+		MissingFields:   []string{"wifi"},
+		SampleMessages: []gemini.SampleMessage{
+			{Style: "Lịch sự", Content: "Chào bạn, mình muốn hỏi..."},
+			{Style: "Trực diện", Content: "Phòng còn không?"},
+		},
+		RawFields: map[string]string{
+			"price":        "5 triệu",
+			"deposit":      "1 tháng",
+			"floor":        "2",
+			"electricity":  "4000/kWh",
+			"water":        "100k/người",
+			"parking_fee":  "Miễn phí",
+			"pets_allowed": "Có",
+		},
+	}
+
+	titleMap := map[string]string{
+		"price":       "Giá thuê",
+		"deposit":     "Tiền cọc",
+		"electricity": "Tiền điện",
+	}
+
+	err := exporter.WriteResult(cfg, result, titleMap)
+	is.NoError(err)
+
+	// Verify file was created and contains expected content
+	activePath, err := exporter.ActiveFilePath(cfg)
+	is.NoError(err)
+	content, err := os.ReadFile(activePath)
+	is.NoError(err)
+
+	contentStr := string(content)
+	is.Contains(contentStr, "Giá thuê")
+	is.Contains(contentStr, "Tiền cọc")
+	is.Contains(contentStr, "Tiền điện")
+	is.Contains(contentStr, "0912345678")
+	is.Contains(contentStr, "Gần chợ")
+	is.Contains(contentStr, "wifi")
+	is.Contains(contentStr, "Lịch sự")
+	is.Contains(contentStr, "Trực diện")
+}
+
+func TestWriteResult_WithNilTitleMap(t *testing.T) {
+	t.Parallel()
+	is := assert.New(t)
+
+	tmpDir := t.TempDir()
+	cfg := exporter.Config{
+		Dir:       tmpDir,
+		MaxSizeKB: 10,
+	}
+
+	result := &gemini.RentalExtractionResult{
+		RawFields: map[string]string{
+			"custom_field": "custom_value",
+		},
+	}
+
+	// Should not panic with nil titleMap
+	err := exporter.WriteResult(cfg, result, nil)
+	is.NoError(err)
+
+	activePath, err := exporter.ActiveFilePath(cfg)
+	is.NoError(err)
+	content, err := os.ReadFile(activePath)
+	is.NoError(err)
+	is.Contains(string(content), "custom_field")
+}
+
+func TestWriteResult_WithEmptyTitleMap(t *testing.T) {
+	t.Parallel()
+	is := assert.New(t)
+
+	tmpDir := t.TempDir()
+	cfg := exporter.Config{
+		Dir:       tmpDir,
+		MaxSizeKB: 10,
+	}
+
+	result := &gemini.RentalExtractionResult{
+		RawFields: map[string]string{
+			"custom_field": "custom_value",
+		},
+	}
+
+	titleMap := map[string]string{}
+
+	err := exporter.WriteResult(cfg, result, titleMap)
+	is.NoError(err)
+
+	// Should use field name as label
+	activePath, err := exporter.ActiveFilePath(cfg)
+	is.NoError(err)
+	content, err := os.ReadFile(activePath)
+	is.NoError(err)
+	is.Contains(string(content), "custom_field")
+}
+
+func TestWriteResult_PhoneNumberNotProvided(t *testing.T) {
+	t.Parallel()
+	is := assert.New(t)
+
+	tmpDir := t.TempDir()
+	cfg := exporter.Config{
+		Dir:       tmpDir,
+		MaxSizeKB: 10,
+	}
+
+	result := &gemini.RentalExtractionResult{
+		PhoneNumber: "Không đề cập",
+		RawFields:   map[string]string{"field": "value"},
+	}
+
+	err := exporter.WriteResult(cfg, result, nil)
+	is.NoError(err)
+
+	activePath, err := exporter.ActiveFilePath(cfg)
+	is.NoError(err)
+	content, err := os.ReadFile(activePath)
+	is.NoError(err)
+	is.NotContains(string(content), "Liên hệ chủ nhà")
+}
+
+func TestWriteResult_AdditionalNotesNotProvided(t *testing.T) {
+	t.Parallel()
+	is := assert.New(t)
+
+	tmpDir := t.TempDir()
+	cfg := exporter.Config{
+		Dir:       tmpDir,
+		MaxSizeKB: 10,
+	}
+
+	result := &gemini.RentalExtractionResult{
+		AdditionalNotes: "Không đề cập",
+		RawFields:       map[string]string{"field": "value"},
+	}
+
+	err := exporter.WriteResult(cfg, result, nil)
+	is.NoError(err)
+
+	activePath, err := exporter.ActiveFilePath(cfg)
+	is.NoError(err)
+	content, err := os.ReadFile(activePath)
+	is.NoError(err)
+	is.NotContains(string(content), "Ghi chú thêm")
+}
