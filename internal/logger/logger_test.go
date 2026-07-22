@@ -25,9 +25,6 @@ func TestDefaultConfig(t *testing.T) {
 		t.Errorf("Expected default console to be true")
 	}
 
-	if cfg.MaxSizeMB != 100 {
-		t.Errorf("Expected default MaxSizeMB to be 100, got %d", cfg.MaxSizeMB)
-	}
 }
 
 func TestLoadFromEnv(t *testing.T) {
@@ -360,30 +357,6 @@ func TestWith(t *testing.T) {
 	assert.NoError(t, err)
 
 	logger := With("custom_key", "custom_value")
-	assert.NotNil(t, logger)
-	logger.Info("test message")
-
-	resetLogger()
-}
-
-func TestWithContext_WithoutRequestID(t *testing.T) {
-	tmpDir := os.TempDir()
-	logPath := filepath.Join(tmpDir, "soi-tro-test-context-no-id.log")
-	os.Remove(logPath)
-	defer os.Remove(logPath)
-
-	cfg := Config{
-		Level:      "info",
-		Format:     "text",
-		OutputPath: logPath,
-		Console:    false,
-	}
-
-	err := Init(cfg)
-	assert.NoError(t, err)
-
-	ctx := context.Background()
-	logger := WithContext(ctx)
 	assert.NotNil(t, logger)
 	logger.Info("test message")
 

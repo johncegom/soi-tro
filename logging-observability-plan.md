@@ -402,18 +402,20 @@ func (c *Client) ExtractRentalInfo(ctx context.Context, ...) {
 
 ---
 
-## 📝 Success Criteria
+## 📝 Success Criteria (re-evaluated 2026-07-22 against actual code)
 
-- [x] All packages sử dụng structured logging
-- [x] Log levels configurable qua environment variables
+- [ ] All packages sử dụng structured logging — chỉ `cmd/main.go` gọi `internal/logger`; `internal/database`, `internal/gemini`, `internal/exporter`, `internal/ui`, `internal/analyzer` vẫn dùng `log.Printf`/`fmt.Print`
+- [x] Log levels configurable qua environment variables (`LOG_LEVEL`)
 - [x] JSON logs cho production, text logs cho development
-- [x] File logging với automatic rotation
-- [x] Context propagation xuyên suốt application
-- [x] Custom error types với error codes
-- [x] Performance monitoring hooks
-- [x] Comprehensive unit test coverage
+- [ ] File logging với automatic rotation — chưa từng được implement, không có size check hay dependency rotation nào trong `internal/logger`; các field `MaxSizeMB/MaxBackups/MaxAgeDays` đã bị xoá khỏi `Config` vì là dead config
+- [ ] Context propagation xuyên suốt application — chỉ có `GetRequestID`/`NewContext` dùng trong `cmd/main.go`; `logger.FromContext`/`logger.WithContext` đã bị xoá, không package nào khác propagate context vào logger
+- [ ] Custom error types với error codes — `internal/errors/` (errors.go, codes.go, errors_test.go) đã bị xoá hoàn toàn
+- [ ] Performance monitoring hooks — không có `latency_ms`/`duration_ms` hay timing hook nào trong codebase
+- [x] Comprehensive unit test coverage cho `internal/logger` (không cho `internal/errors`, đã xoá)
 - [x] Zero breaking changes cho existing functionality
-- [x] Documentation cho logger usage
+- [ ] Documentation cho logger usage — `docs/logging.md` chưa tồn tại
+
+**Kết luận**: chỉ Phase 1 (core logger infrastructure: levels, JSON/text, file+console output, env config, unit tests) thực sự hoàn thành. Phase 2 (custom error types) đã bị revert/xoá. Phase 3 (integration toàn app, context propagation, performance monitoring) và Phase 4 (rotation validation) chưa triển khai.
 
 ---
 

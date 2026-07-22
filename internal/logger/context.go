@@ -2,7 +2,6 @@ package logger
 
 import (
 	"context"
-	"log/slog"
 
 	"github.com/google/uuid"
 )
@@ -16,17 +15,6 @@ const requestIDKey contextKey = "request_id"
 func NewContext(ctx context.Context) context.Context {
 	requestID := uuid.New().String()
 	return context.WithValue(ctx, requestIDKey, requestID)
-}
-
-// FromContext extracts the request ID from context
-func FromContext(ctx context.Context) *slog.Logger {
-	logger := Get()
-
-	if requestID, ok := ctx.Value(requestIDKey).(string); ok {
-		return logger.With("request_id", requestID)
-	}
-
-	return logger
 }
 
 // WithRequestID adds a request ID to the context
