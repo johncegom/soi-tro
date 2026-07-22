@@ -36,10 +36,10 @@ Tài liệu này đề xuất lộ trình và kế hoạch chi tiết để tíc
   - *Trạng thái*: Lập kế hoạch.
   - *Phụ thuộc*: Không phụ thuộc.
 
-- [x] [CONFIRMED] **Task 6: Hệ Thống Logging & Observability (Logging & Observability System)**
+- [ ] [CONFIRMED] **Task 6: Hệ Thống Logging & Observability (Logging & Observability System)**
   - *Mô tả*: Tích hợp hệ thống logging có cấu trúc và observability để giúp phát hiện lỗi nhanh chóng và cải thiện quy trình debug cho developer.
-  - *Giải pháp kỹ thuật*: Sử dụng Go's `log/slog` cho structured logging, custom error types với error codes, context propagation cho request tracing, file logging với rotation, và configurable log levels. Xem chi tiết trong `logging-observability-plan.md`.
-  - *Trạng thái*: Hoàn thành (Phase 1 & 2 - Core infrastructure and main.go integration).
+  - *Giải pháp kỹ thuật*: Sử dụng Go's `log/slog` cho structured logging và configurable log levels. Xem chi tiết trong `logging-observability-plan.md`.
+  - *Trạng thái*: Một phần hoàn thành. Đã có: `internal/logger/` (slog, JSON/text, level, env config) tích hợp vào `cmd/main.go`, và `GetRequestID`/`NewContext` cho request ID. Chưa có / đã gỡ bỏ: log rotation (chưa từng implement — không có size check hay lumberjack), custom error types/error codes (`internal/errors/` đã bị xoá), `FromContext`/`WithContext` helpers, performance monitoring hooks, và structured logging ở các package khác (`internal/database`, `internal/gemini`, `internal/exporter`, `internal/ui`, `internal/analyzer` vẫn dùng `log.Printf`/`fmt.Print`).
   - *Phụ thuộc*: Không phụ thuộc.
 
 ---

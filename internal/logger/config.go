@@ -12,11 +12,6 @@ type Config struct {
 	Format     string // json, text
 	OutputPath string // path to log file
 	Console    bool   // enable console output
-	
-	// Rotation settings
-	MaxSizeMB  int // maximum size in megabytes before rotation
-	MaxBackups int // maximum number of old log files to retain
-	MaxAgeDays int // maximum number of days to retain old log files
 }
 
 // DefaultConfig returns a sensible default configuration
@@ -31,9 +26,6 @@ func DefaultConfig() Config {
 		Format:     "text", // text for development, json for production
 		OutputPath: filepath.Join(homeDir, ".config", "soi-tro", "app.log"),
 		Console:    true,
-		MaxSizeMB:  100,
-		MaxBackups: 5,
-		MaxAgeDays: 30,
 	}
 }
 

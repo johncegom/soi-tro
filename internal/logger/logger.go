@@ -1,7 +1,6 @@
 package logger
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"log/slog"
@@ -113,16 +112,6 @@ func Warn(msg string, args ...any) {
 // Error logs an error message
 func Error(msg string, args ...any) {
 	Get().Error(msg, args...)
-}
-
-// WithContext returns a logger with context
-func WithContext(ctx context.Context) *slog.Logger {
-	logger := Get()
-	// Try to get request ID from context
-	if requestID := GetRequestID(ctx); requestID != "" {
-		return logger.With("request_id", requestID)
-	}
-	return logger
 }
 
 // With returns a logger with additional attributes
