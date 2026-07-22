@@ -42,6 +42,12 @@ Tài liệu này đề xuất lộ trình và kế hoạch chi tiết để tíc
   - *Trạng thái*: Một phần hoàn thành. Đã có: `internal/logger/` (slog, JSON/text, level, env config) tích hợp vào `cmd/main.go`, và `GetRequestID`/`NewContext` cho request ID. Chưa có / đã gỡ bỏ: log rotation (chưa từng implement — không có size check hay lumberjack), custom error types/error codes (`internal/errors/` đã bị xoá), `FromContext`/`WithContext` helpers, performance monitoring hooks, và structured logging ở các package khác (`internal/database`, `internal/gemini`, `internal/exporter`, `internal/ui`, `internal/analyzer` vẫn dùng `log.Printf`/`fmt.Print`).
   - *Phụ thuộc*: Không phụ thuộc.
 
+- [x] [CONFIRMED] **Task 7: CI/CD Pipeline - Kiểm Tra Chất Lượng & Bảo Mật (Quality & Security Gates)**
+  - *Mô tả*: Thiết lập pipeline CI/CD trên GitHub Actions để đảm bảo mọi thay đổi code đều đạt chuẩn chất lượng và bảo mật trước khi merge vào `main`, chuẩn bị cho việc release sản phẩm.
+  - *Giải pháp kỹ thuật*: 3 workflow chạy trên mọi push/PR — `test.yml` (build, `go vet`, `go mod tidy` drift check, `go test -race -shuffle=on` với coverage), `lint.yml` (`golangci-lint` với config `.golangci.yml`, scoped `only-new-issues: true` để không chặn bởi ~670 lỗi lint tồn đọng trong code cũ), `security.yml` (`govulncheck` + `gosec`, kết quả SARIF upload lên code scanning tab). Thêm `.github/dependabot.yml` cho cập nhật dependency định kỳ hàng tuần. Branch protection trên `main` yêu cầu cả 4 check (`Test (Go 1.26)`, `Lint`, `Vulnerability Check`, `gosec`) pass trước khi merge, chặn force-push/xoá nhánh. `release.yml` (build & publish binary khi tag `v*`) giữ nguyên, không đổi.
+  - *Trạng thái*: Hoàn thành. PR [#4](https://github.com/johncegom/soi-tro/pull/4), tất cả checks pass. Trong quá trình triển khai, pipeline đã phát hiện và fix luôn: `go.mod` drift (`google/uuid` bị đánh dấu sai là indirect), action tag sai (`securego/gosec@v2` không tồn tại, phải ghim `@v2.28.0`), và **3 lỗ hổng bảo mật thật sự reachable** trong transitive dependencies qua Gemini SDK (`golang.org/x/text` GO-2026-5970, `golang.org/x/net` GO-2026-5026 và GO-2026-4918) — đã nâng cấp lên bản vá.
+  - *Phụ thuộc*: Không phụ thuộc.
+
 ---
 
 ## 🛠️ Kế Hoạch Triển Khai Tiếp Theo (Next Steps)
@@ -49,3 +55,5 @@ Tài liệu này đề xuất lộ trình và kế hoạch chi tiết để tíc
 2. **Bước 2**: Thực hiện tích hợp tính năng **Task 1 (Lưu trữ SQLite)** làm bước đệm đầu tiên (đang bị chặn do Task 3 phụ thuộc vào Task 1).
 3. **Bước 3**: Triển khai tính năng **Task 3 (So sánh song song)** sau khi Task 1 hoàn tất.
 4. **Bước 4**: Triển khai tính năng **Task 6 (Logging & Observability)** để cải thiện khả năng debug và monitoring cho toàn bộ ứng dụng.
+5. **Bước 5**: Triển khai **Task 7 (CI/CD Pipeline)** để chặn merge code không đạt chuẩn chất lượng/bảo mật — hoàn thành, đang chờ merge PR #4.
+6. **Bước 6**: Hoàn thiện phần còn thiếu của Task 6 (structured logging cho `internal/database`/`internal/gemini`/`internal/exporter`/`internal/ui`/`internal/analyzer`, custom error types, performance monitoring hooks) — xem chi tiết trong `logging-observability-plan.md`.
