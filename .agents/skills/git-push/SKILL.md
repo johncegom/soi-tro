@@ -6,7 +6,7 @@ license: MIT
 compatibility: Designed for Antigravity, Claude Code, and other Agent Skills compatible runners.
 metadata:
   author: local
-  version: "1.1.0"
+  version: "1.1.1"
   openclaw:
     emoji: "🚀"
     homepage: https://github.com/local/git-push
@@ -39,10 +39,14 @@ Safely turn the requested local changes into a reviewable GitHub pull request.
 7. If PR creation is unavailable or fails, the pushed branch is still a useful
    result. Return a GitHub compare URL that opens the PR form for the pushed
    branch, using the repository URL, base branch, and head branch discovered
-   from Git rather than guessing them.
+   from Git rather than guessing them. Also provide a ready-to-paste PR title
+   and Markdown body. The title should describe the committed change concisely.
+   The body should summarize the change and list only verification that actually
+   ran; do not invent test results. Present both in clearly labeled code blocks.
 8. Finish by reporting the branch, commit, push result, PR URL or fallback URL,
-   and `git status --short`. Do not claim that the default branch is up to date
-   merely because the feature branch was pushed.
+   fallback PR title and body when applicable, and `git status --short`. Do not
+   claim that the default branch is up to date merely because the feature branch
+   was pushed.
 
 An explicit request to run `git-push` authorizes this complete commit, new-branch
 push, and pull-request workflow. If the user asks for only one part, such as a
