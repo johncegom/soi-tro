@@ -243,6 +243,17 @@ func PromptAndSaveModel() error {
 	return nil
 }
 
+// validateGeminiAPIKey validates only properties controlled by the user.
+// Google treats API and authorization key values as opaque credentials, so
+// their format must not be inferred from a prefix.
+func validateGeminiAPIKey(key string) error {
+	if strings.TrimSpace(key) == "" {
+		return errors.New("API Key không được để trống")
+	}
+
+	return nil
+}
+
 // EnsureGlobalAPIKey ensures GEMINI_API_KEY is loaded into the environment
 func EnsureGlobalAPIKey() error {
 	// 1. Check if the key is already in the environment
@@ -269,20 +280,11 @@ func EnsureGlobalAPIKey() error {
 	form := huh.NewForm(
 		huh.NewGroup(
 			huh.NewInput().
-				Title("Vui lòng dán Gemini API Key của bạn").
-				Placeholder("VD: AIzaSy...").
+				Title("Vui lòng dán Gemini API key / authorization key của bạn").
+				Placeholder("Khóa được tạo trong Google AI Studio").
 				EchoMode(huh.EchoModePassword). // Hide the key as it is typed
 				Value(&apiKeyInput).
-				Validate(func(s string) error {
-					s = strings.TrimSpace(s)
-					if s == "" {
-						return errors.New("API Key không được để trống")
-					}
-					if !strings.HasPrefix(s, "AIzaSy") {
-						return errors.New("API Key Google Gemini thường bắt đầu bằng 'AIzaSy'")
-					}
-					return nil
-				}),
+				Validate(validateGeminiAPIKey),
 		),
 	)
 
