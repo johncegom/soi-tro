@@ -14,7 +14,8 @@ maintainer, but work continues across independent agent sessions and affects
 real user data.
 
 - Task ledger: `docs/LEDGER.md`
-- Task details: `docs/tasks/<NNN>-<slug>/TASK.md`
+- Task details: `docs/tasks/<NNN>-<slug>.md` by default; use
+  `docs/tasks/<NNN>-<slug>/TASK.md` only when a task needs supporting artifacts
 - Bug log: `docs/BUGS.md`
 - Decision log: `docs/DECISIONS.md`
 - Existing backlog and older task history: `feature-plan.md`

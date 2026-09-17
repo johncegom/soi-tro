@@ -1,13 +1,23 @@
 # Task Ledger
 
 Current status: the EAGD mechanism and risk-based file authorization are
-installed. Existing backlog items remain in `feature-plan.md` and should be
-moved here only when selected for implementation.
+installed. Legacy plans have been normalized into this ledger; proposed items
+remain unapproved until the maintainer selects them for implementation.
 
 | # | Task | Status | Detail |
 |---|------|--------|--------|
-| 001 | Install EAGD role-spawn mechanism | Complete | `docs/tasks/001-bootstrap-eagd/TASK.md` |
-| 002 | Recalibrate file-change authorization | Complete | `docs/tasks/002-file-authorization/TASK.md` |
+| 001 | Install EAGD role-spawn mechanism | Complete | `docs/tasks/001-bootstrap-eagd.md` |
+| 002 | Recalibrate file-change authorization | Complete | `docs/tasks/002-file-authorization.md` |
+| 003 | Migrate legacy plans into the Tier 2 workflow | Complete | `docs/tasks/003-migrate-legacy-plans.md` |
+| 004 | Add local SQLite history | Complete | `docs/tasks/004-sqlite-history.md` |
+| 005 | Add side-by-side rental comparison | Complete | `docs/tasks/005-side-by-side-comparison.md` |
+| 006 | Increase core package unit-test coverage | Complete | `docs/tasks/006-core-test-coverage.md` |
+| 007 | Add CI quality and security gates | Complete | `docs/tasks/007-ci-quality-security.md` |
+| 008 | Add batch directory processing | Proposed | `docs/tasks/008-batch-processing.md` |
+| 009 | Add customizable message templates | Proposed | `docs/tasks/009-message-templates.md` |
+| 010 | Add Vietnamese rental-price normalization | Proposed | `docs/tasks/010-price-normalizer.md` |
+| 011 | Finish structured-logging integration | Proposed | `docs/tasks/011-logging-integration.md` |
+| 012 | Flatten task-document layout | Complete | `docs/tasks/012-flatten-task-docs.md` |
 
 ## Resume checklist
 
