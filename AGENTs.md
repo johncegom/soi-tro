@@ -14,6 +14,7 @@ maintainer, but work continues across independent agent sessions and affects
 real user data.
 
 - Task ledger: `docs/LEDGER.md`
+- Idea inbox: `docs/IDEAS.md`
 - Task details: `docs/tasks/<NNN>-<slug>.md` by default; use
   `docs/tasks/<NNN>-<slug>/TASK.md` only when a task needs supporting artifacts
 - Bug log: `docs/BUGS.md`
@@ -21,7 +22,8 @@ real user data.
 - Existing backlog and older task history: `feature-plan.md`
 
 Read the ledger first, then open only the task documents relevant to the
-current work.
+current work. Read the idea inbox when brainstorming or promoting an idea into
+the ledger.
 
 ## File-change authorization
 
