@@ -4,17 +4,17 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"soi-tro/internal/gemini"
+	"soi-tro/internal/logger"
 	"strings"
 	"time"
-
-	"soi-tro/internal/gemini"
 )
 
 const (
-	filePrefix     = "soi-tro-results"
-	defaultMaxKB   = 1024 // 1 MB
-	maxFileNumber  = 9999
-	separator      = "\n================================================================================\n"
+	filePrefix    = "soi-tro-results"
+	defaultMaxKB  = 1024 // 1 MB
+	maxFileNumber = 9999
+	separator     = "\n================================================================================\n"
 )
 
 // Config holds export configuration.
@@ -38,7 +38,14 @@ func DefaultConfig() Config {
 //   - File permissions are 0o600 (owner read/write only) to protect PII
 //   - File numbering is capped at maxFileNumber to prevent infinite loops
 //   - Each file handle uses a dedicated scoped helper to ensure safe defer/close
-func WriteResult(cfg Config, result *gemini.RentalExtractionResult, titleMap map[string]string) error {
+//
+//nolint:wsl_v5 // Preserve the existing export flow around logging stages.
+func WriteResult(cfg Config, result *gemini.RentalExtractionResult, titleMap map[string]string) (err error) {
+	started := time.Now()
+	failureStage := "resolve_directory"
+	log := logger.With("operation", "export.write_result")
+	defer func() { logger.LogOperationResult(log, started, failureStage, err) }()
+
 	// Security: resolve to absolute path to neutralize any ".." path traversal
 	// in the user-supplied directory before any filesystem operation.
 	absDir, err := filepath.Abs(cfg.Dir)
@@ -47,6 +54,7 @@ func WriteResult(cfg Config, result *gemini.RentalExtractionResult, titleMap map
 	}
 	cfg.Dir = absDir
 
+	failureStage = "create_directory"
 	if err := os.MkdirAll(cfg.Dir, 0o755); err != nil {
 		return fmt.Errorf("failed to create export directory: %w", err)
 	}
@@ -54,6 +62,7 @@ func WriteResult(cfg Config, result *gemini.RentalExtractionResult, titleMap map
 	maxBytes := int64(cfg.MaxSizeKB) * 1024
 	content := formatResult(result, titleMap)
 
+	failureStage = "find_active_file"
 	activeFile, num, err := findActiveFile(cfg.Dir, maxBytes)
 	if err != nil {
 		return fmt.Errorf("failed to determine active export file: %w", err)
@@ -64,16 +73,25 @@ func WriteResult(cfg Config, result *gemini.RentalExtractionResult, titleMap map
 	if statErr == nil && info.Size() > 0 && info.Size()+int64(len(content)) > maxBytes {
 		num++
 		if num > maxFileNumber {
+			failureStage = "file_limit"
 			return fmt.Errorf("reached maximum export file limit (%d)", maxFileNumber)
 		}
 		activeFile = buildFilePath(cfg.Dir, num)
 	}
 
+	failureStage = "append_file"
 	return appendToFile(activeFile, content)
 }
 
 // ActiveFilePath returns the path of the currently active export file for display purposes.
-func ActiveFilePath(cfg Config) (string, error) {
+//
+//nolint:wsl_v5 // Preserve the existing export flow around logging stages.
+func ActiveFilePath(cfg Config) (path string, err error) {
+	started := time.Now()
+	failureStage := "resolve_directory"
+	log := logger.With("operation", "export.active_file_path")
+	defer func() { logger.LogOperationResult(log, started, failureStage, err) }()
+
 	// Security: resolve absolute path consistently with WriteResult.
 	absDir, err := filepath.Abs(cfg.Dir)
 	if err != nil {
@@ -82,7 +100,8 @@ func ActiveFilePath(cfg Config) (string, error) {
 	cfg.Dir = absDir
 
 	maxBytes := int64(cfg.MaxSizeKB) * 1024
-	path, _, err := findActiveFile(cfg.Dir, maxBytes)
+	failureStage = "find_active_file"
+	path, _, err = findActiveFile(cfg.Dir, maxBytes)
 	return path, err
 }
 

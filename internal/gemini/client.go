@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"soi-tro/internal/analyzer"
+	"soi-tro/internal/logger"
+	"time"
 
 	"google.golang.org/genai"
-	"soi-tro/internal/analyzer"
 )
 
 // SampleMessage represents the generated follow-up message in a specific style.
@@ -38,13 +40,21 @@ type Client struct {
 }
 
 // NewClient initializes the GenAI Client using standard configuration.
-func NewClient(ctx context.Context) (*Client, error) {
+//
+//nolint:wsl_v5 // Preserve the existing client setup flow around logging stages.
+func NewClient(ctx context.Context) (client *Client, err error) {
+	started := time.Now()
+	failureStage := "read_credentials"
+	log := logger.FromContext(ctx).With("operation", "gemini.new_client")
+	defer func() { logger.LogOperationResult(log, started, failureStage, err) }()
+
 	apiKey := os.Getenv("GEMINI_API_KEY")
 	if apiKey == "" {
 		return nil, fmt.Errorf("GEMINI_API_KEY environment variable is not set")
 	}
 
 	// Initialize the official GenAI Client (picks up GEMINI_API_KEY from environment)
+	failureStage = "create_client"
 	genaiClient, err := genai.NewClient(ctx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create GenAI client: %w", err)
@@ -56,7 +66,14 @@ func NewClient(ctx context.Context) (*Client, error) {
 }
 
 // ExtractRentalInfo performs the parsing using the gemini-3.1-flash-lite model.
-func (c *Client) ExtractRentalInfo(ctx context.Context, text string, imageBytes []byte, imageMIME string, requiredFields []string) (*RentalExtractionResult, error) {
+//
+//nolint:gocyclo,wsl_v5 // Existing extraction flow exceeds thresholds; logging adds no branch.
+func (c *Client) ExtractRentalInfo(ctx context.Context, text string, imageBytes []byte, imageMIME string, requiredFields []string) (result *RentalExtractionResult, err error) {
+	started := time.Now()
+	failureStage := "validate_input"
+	log := logger.FromContext(ctx).With("operation", "gemini.extract_rental")
+	defer func() { logger.LogOperationResult(log, started, failureStage, err) }()
+
 	var parts []*genai.Part
 
 	if text != "" {
@@ -84,10 +101,12 @@ func (c *Client) ExtractRentalInfo(ctx context.Context, text string, imageBytes 
 	}
 
 	// Load response schema dynamically from file
+	failureStage = "get_schema_path"
 	schemaPath, err := analyzer.GetSchemaPath()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get schema path: %w", err)
 	}
+	failureStage = "load_schema"
 	schema, err := LoadSchema(schemaPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load output schema (%s): %w", schemaPath, err)
@@ -129,40 +148,43 @@ Tin nhắn mẫu (trong 'sample_messages', chính xác 2 tin):
 	}
 
 	modelName := analyzer.GetGlobalModel()
+	failureStage = "generate_content"
 	resp, err := c.genaiClient.Models.GenerateContent(ctx, modelName, contents, config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate content from Gemini API: %w", err)
 	}
 
 	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
+		failureStage = "empty_response"
 		return nil, fmt.Errorf("no response candidates returned by Gemini")
 	}
 
 	responseText := resp.Candidates[0].Content.Parts[0].Text
 
-	var result RentalExtractionResult
-	if err := json.Unmarshal([]byte(responseText), &result); err != nil {
+	failureStage = "decode_response"
+	var extracted RentalExtractionResult
+	if err := json.Unmarshal([]byte(responseText), &extracted); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal JSON response from model (raw response was %q): %w", responseText, err)
 	}
 
 	// Dynamic parsing to capture any user-added fields
 	var rawMap map[string]json.RawMessage
 	if err := json.Unmarshal([]byte(responseText), &rawMap); err == nil {
-		result.RawFields = make(map[string]string)
+		extracted.RawFields = make(map[string]string)
 		for k, v := range rawMap {
 			if k == "missing_fields" || k == "sample_messages" {
 				continue
 			}
 			var s string
 			if err := json.Unmarshal(v, &s); err == nil {
-				result.RawFields[k] = s
+				extracted.RawFields[k] = s
 			} else {
-				result.RawFields[k] = string(v)
+				extracted.RawFields[k] = string(v)
 			}
 		}
 	}
 
-	return &result, nil
+	return &extracted, nil
 }
 
 // LoadSchema loads the OpenAPI 3.0 schema from a JSON file.
@@ -241,7 +263,8 @@ const exportConfigKey = "x_export_config"
 func LoadExportConfig(filePath string) (exportCfg struct {
 	Dir       string `json:"dir"`
 	MaxSizeKB int    `json:"max_size_kb"`
-}, configured bool, err error) {
+}, configured bool, err error,
+) {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return exportCfg, false, fmt.Errorf("failed to read schema file: %w", err)
@@ -270,7 +293,7 @@ func LoadExportConfig(filePath string) (exportCfg struct {
 
 // SaveExportConfig writes export settings into the x_export_config key of schema.json,
 // preserving all other existing top-level keys.
-func SaveExportConfig(filePath string, dir string, maxSizeKB int) error {
+func SaveExportConfig(filePath, dir string, maxSizeKB int) error {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to read schema file: %w", err)
@@ -306,4 +329,3 @@ func SaveExportConfig(filePath string, dir string, maxSizeKB int) error {
 
 	return nil
 }
-

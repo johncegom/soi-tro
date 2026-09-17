@@ -16,7 +16,7 @@ remain unapproved until the maintainer selects them for implementation.
 | 008 | Add batch directory processing | Proposed | `docs/tasks/008-batch-processing.md` |
 | 009 | Add customizable message templates | Proposed | `docs/tasks/009-message-templates.md` |
 | 010 | Add Vietnamese rental-price normalization | Proposed | `docs/tasks/010-price-normalizer.md` |
-| 011 | Finish structured-logging integration | Proposed | `docs/tasks/011-logging-integration.md` |
+| 011 | Finish structured-logging integration | Complete | `docs/tasks/011-logging-integration.md` |
 | 012 | Flatten task-document layout | Complete | `docs/tasks/012-flatten-task-docs.md` |
 
 ## Resume checklist
