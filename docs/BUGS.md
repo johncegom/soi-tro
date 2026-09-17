@@ -35,3 +35,22 @@ iteration-time error rather than a query or scan error.
 test using an injectable query boundary or a driver-level failure fixture.
 
 **Status:** pending decision
+
+## BUG-002: Valid Gemini authorization keys can be rejected during setup
+
+**Symptom:** The interactive credential setup rejects a non-empty Gemini
+credential unless its value begins with `AIzaSy`, preventing users from saving
+valid credentials with another format.
+
+**Root cause:** `EnsureGlobalAPIKey` inferred credential validity from a legacy
+key prefix instead of treating the value as an opaque secret for the official
+Google GenAI SDK to authenticate.
+
+**Reachability:** A user without `GEMINI_API_KEY` or a saved key reaches the
+interactive setup during application startup. The inline form validator blocks
+the credential before `gemini.NewClient` can pass it to the SDK.
+
+**Options:** Remove format-specific validation and retain only the non-empty
+check; keep trimming, secure local storage, and SDK-side authentication.
+
+**Status:** fixed in the Gemini authorization-key compatibility change
