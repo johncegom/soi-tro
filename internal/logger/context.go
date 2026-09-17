@@ -2,6 +2,7 @@ package logger
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/google/uuid"
 )
@@ -28,4 +29,16 @@ func GetRequestID(ctx context.Context) string {
 		return requestID
 	}
 	return ""
+}
+
+// FromContext returns the application logger with the request ID attached when
+// the context carries one.
+//
+//nolint:wsl_v5 // Keep the early return readable in this small context helper.
+func FromContext(ctx context.Context) *slog.Logger {
+	requestID := GetRequestID(ctx)
+	if requestID == "" {
+		return Get()
+	}
+	return Get().With("request_id", requestID)
 }

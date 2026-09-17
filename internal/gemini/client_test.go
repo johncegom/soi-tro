@@ -1,15 +1,17 @@
 package gemini
 
 import (
+	"bytes"
 	"context"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
+	"soi-tro/internal/analyzer"
+	"soi-tro/internal/logger"
 	"strings"
 	"testing"
-
-	"soi-tro/internal/analyzer"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -67,7 +69,7 @@ func TestSchemaAndExportConfig(t *testing.T) {
 
 	signedBytes, err := analyzer.SignSchema([]byte(baseJSON))
 	must.NoError(err)
-	err = os.WriteFile(schemaPath, signedBytes, 0644)
+	err = os.WriteFile(schemaPath, signedBytes, 0o600)
 	must.NoError(err)
 
 	// 2. Kiểm thử LoadSchema
@@ -169,7 +171,7 @@ func TestLoadSchema_FileNotExist(t *testing.T) {
 func TestLoadSchema_InvalidSignature(t *testing.T) {
 	mockHome := mockUserHomeDir(t)
 	schemaPath := filepath.Join(mockHome, "schema.json")
-	err := os.WriteFile(schemaPath, []byte(`{"type": "OBJECT"}`), 0600)
+	err := os.WriteFile(schemaPath, []byte(`{"type": "OBJECT"}`), 0o600)
 	assert.NoError(t, err)
 
 	_, err = LoadSchema(schemaPath)
@@ -183,7 +185,7 @@ func TestLoadSchema_InvalidSchemaStructure(t *testing.T) {
 
 	mockHome := mockUserHomeDir(t)
 	schemaPath := filepath.Join(mockHome, "schema.json")
-	err = os.WriteFile(schemaPath, signedBytes, 0600)
+	err = os.WriteFile(schemaPath, signedBytes, 0o600)
 	require.NoError(t, err)
 
 	_, err = LoadSchema(schemaPath)
@@ -199,7 +201,7 @@ func TestLoadExportConfig_FileNotExist(t *testing.T) {
 func TestLoadExportConfig_InvalidSignature(t *testing.T) {
 	mockHome := mockUserHomeDir(t)
 	schemaPath := filepath.Join(mockHome, "schema.json")
-	err := os.WriteFile(schemaPath, []byte(`{"type": "OBJECT"}`), 0600)
+	err := os.WriteFile(schemaPath, []byte(`{"type": "OBJECT"}`), 0o600)
 	assert.NoError(t, err)
 
 	_, _, err = LoadExportConfig(schemaPath)
@@ -213,7 +215,7 @@ func TestLoadExportConfig_InvalidConfigType(t *testing.T) {
 
 	mockHome := mockUserHomeDir(t)
 	schemaPath := filepath.Join(mockHome, "schema.json")
-	err = os.WriteFile(schemaPath, signedBytes, 0600)
+	err = os.WriteFile(schemaPath, signedBytes, 0o600)
 	require.NoError(t, err)
 
 	_, _, err = LoadExportConfig(schemaPath)
@@ -229,7 +231,7 @@ func TestSaveExportConfig_FileNotExist(t *testing.T) {
 func TestSaveExportConfig_Untrusted(t *testing.T) {
 	mockHome := mockUserHomeDir(t)
 	schemaPath := filepath.Join(mockHome, "schema.json")
-	err := os.WriteFile(schemaPath, []byte(`{"type": "OBJECT"}`), 0600)
+	err := os.WriteFile(schemaPath, []byte(`{"type": "OBJECT"}`), 0o600)
 	assert.NoError(t, err)
 
 	err = SaveExportConfig(schemaPath, "/dir", 1024)
@@ -347,7 +349,7 @@ func newMockClient(t *testing.T, handler roundTripFunc) *Client {
 func TestSaveSchema_WriteFileFail(t *testing.T) {
 	mockHome := mockUserHomeDir(t)
 	dirPath := filepath.Join(mockHome, "schema.json")
-	err := os.Mkdir(dirPath, 0755)
+	err := os.Mkdir(dirPath, 0o750)
 	require.NoError(t, err)
 
 	err = SaveSchema(dirPath, &genai.Schema{}, nil)
@@ -358,7 +360,7 @@ func TestSaveSchema_WriteFileFail(t *testing.T) {
 func TestSaveSchema_ExistingUntrusted(t *testing.T) {
 	mockHome := mockUserHomeDir(t)
 	schemaPath := filepath.Join(mockHome, "schema.json")
-	err := os.WriteFile(schemaPath, []byte(`{"type": "OBJECT", "x_signature": "invalid"}`), 0600)
+	err := os.WriteFile(schemaPath, []byte(`{"type": "OBJECT", "x_signature": "invalid"}`), 0o600)
 	require.NoError(t, err)
 
 	err = SaveSchema(schemaPath, &genai.Schema{Type: genai.TypeObject}, nil)
@@ -368,7 +370,7 @@ func TestSaveSchema_ExistingUntrusted(t *testing.T) {
 func TestExtractRentalInfo_Success(t *testing.T) {
 	mockHome := mockUserHomeDir(t)
 	configDir := filepath.Join(mockHome, ".config", "soi-tro")
-	err := os.MkdirAll(configDir, 0700)
+	err := os.MkdirAll(configDir, 0o700)
 	require.NoError(t, err)
 	schemaPath := filepath.Join(configDir, "schema.json")
 
@@ -390,7 +392,7 @@ func TestExtractRentalInfo_Success(t *testing.T) {
 	}`
 	signedBytes, err := analyzer.SignSchema([]byte(baseJSON))
 	require.NoError(t, err)
-	err = os.WriteFile(schemaPath, signedBytes, 0600)
+	err = os.WriteFile(schemaPath, signedBytes, 0o600)
 	require.NoError(t, err)
 
 	apiResponse := `{
@@ -430,13 +432,13 @@ func TestExtractRentalInfo_Success(t *testing.T) {
 func TestExtractRentalInfo_SuccessImage(t *testing.T) {
 	mockHome := mockUserHomeDir(t)
 	configDir := filepath.Join(mockHome, ".config", "soi-tro")
-	err := os.MkdirAll(configDir, 0700)
+	err := os.MkdirAll(configDir, 0o700)
 	require.NoError(t, err)
 	schemaPath := filepath.Join(configDir, "schema.json")
 	baseJSON := `{"type": "OBJECT", "properties": {"missing_fields": {"type": "ARRAY", "items": {"type": "STRING"}}}}`
 	signedBytes, err := analyzer.SignSchema([]byte(baseJSON))
 	require.NoError(t, err)
-	err = os.WriteFile(schemaPath, signedBytes, 0600)
+	err = os.WriteFile(schemaPath, signedBytes, 0o600)
 	require.NoError(t, err)
 
 	apiResponse := `{"candidates": [{"content": {"parts": [{"text": "{\"price\": \"4,000,000 VND\", \"custom_number_field\": 123}"}]}}]}`
@@ -459,13 +461,13 @@ func TestExtractRentalInfo_SuccessImage(t *testing.T) {
 func TestExtractRentalInfo_APIFail(t *testing.T) {
 	mockHome := mockUserHomeDir(t)
 	configDir := filepath.Join(mockHome, ".config", "soi-tro")
-	err := os.MkdirAll(configDir, 0700)
+	err := os.MkdirAll(configDir, 0o700)
 	require.NoError(t, err)
 	schemaPath := filepath.Join(configDir, "schema.json")
 	baseJSON := `{"type": "OBJECT", "properties": {}}`
 	signedBytes, err := analyzer.SignSchema([]byte(baseJSON))
 	require.NoError(t, err)
-	err = os.WriteFile(schemaPath, signedBytes, 0600)
+	err = os.WriteFile(schemaPath, signedBytes, 0o600)
 	require.NoError(t, err)
 
 	c := newMockClient(t, roundTripFunc(func(req *http.Request) (*http.Response, error) {
@@ -484,13 +486,13 @@ func TestExtractRentalInfo_APIFail(t *testing.T) {
 func TestExtractRentalInfo_NoCandidates(t *testing.T) {
 	mockHome := mockUserHomeDir(t)
 	configDir := filepath.Join(mockHome, ".config", "soi-tro")
-	err := os.MkdirAll(configDir, 0700)
+	err := os.MkdirAll(configDir, 0o700)
 	require.NoError(t, err)
 	schemaPath := filepath.Join(configDir, "schema.json")
 	baseJSON := `{"type": "OBJECT", "properties": {}}`
 	signedBytes, err := analyzer.SignSchema([]byte(baseJSON))
 	require.NoError(t, err)
-	err = os.WriteFile(schemaPath, signedBytes, 0600)
+	err = os.WriteFile(schemaPath, signedBytes, 0o600)
 	require.NoError(t, err)
 
 	apiResponse := `{"candidates": []}`
@@ -511,13 +513,13 @@ func TestExtractRentalInfo_NoCandidates(t *testing.T) {
 func TestExtractRentalInfo_MalformedJSON(t *testing.T) {
 	mockHome := mockUserHomeDir(t)
 	configDir := filepath.Join(mockHome, ".config", "soi-tro")
-	err := os.MkdirAll(configDir, 0700)
+	err := os.MkdirAll(configDir, 0o700)
 	require.NoError(t, err)
 	schemaPath := filepath.Join(configDir, "schema.json")
 	baseJSON := `{"type": "OBJECT", "properties": {}}`
 	signedBytes, err := analyzer.SignSchema([]byte(baseJSON))
 	require.NoError(t, err)
-	err = os.WriteFile(schemaPath, signedBytes, 0600)
+	err = os.WriteFile(schemaPath, signedBytes, 0o600)
 	require.NoError(t, err)
 
 	apiResponse := `{"candidates": [{"content": {"parts": [{"text": "invalid-json-here"}]}}]}`
@@ -541,7 +543,7 @@ func TestLoadExportConfig_NotConfigured(t *testing.T) {
 	baseJSON := `{"type": "OBJECT"}`
 	signedBytes, err := analyzer.SignSchema([]byte(baseJSON))
 	require.NoError(t, err)
-	err = os.WriteFile(schemaPath, signedBytes, 0600)
+	err = os.WriteFile(schemaPath, signedBytes, 0o600)
 	require.NoError(t, err)
 
 	cfg, configured, err := LoadExportConfig(schemaPath)
@@ -556,13 +558,13 @@ func TestSaveExportConfig_WriteFileFail(t *testing.T) {
 	baseJSON := `{"type": "OBJECT"}`
 	signedBytes, err := analyzer.SignSchema([]byte(baseJSON))
 	require.NoError(t, err)
-	err = os.WriteFile(schemaPath, signedBytes, 0600)
+	err = os.WriteFile(schemaPath, signedBytes, 0o600)
 	require.NoError(t, err)
 
-	err = os.Chmod(schemaPath, 0400)
+	err = os.Chmod(schemaPath, 0o400)
 	require.NoError(t, err)
 	t.Cleanup(func() {
-		_ = os.Chmod(schemaPath, 0600)
+		_ = os.Chmod(schemaPath, 0o600)
 	})
 
 	err = SaveExportConfig(schemaPath, "/dir", 1024)
@@ -576,13 +578,13 @@ func TestSaveSchema_WriteFileFailReadOnly(t *testing.T) {
 	baseJSON := `{"type": "OBJECT"}`
 	signedBytes, err := analyzer.SignSchema([]byte(baseJSON))
 	require.NoError(t, err)
-	err = os.WriteFile(schemaPath, signedBytes, 0600)
+	err = os.WriteFile(schemaPath, signedBytes, 0o600)
 	require.NoError(t, err)
 
-	err = os.Chmod(schemaPath, 0400)
+	err = os.Chmod(schemaPath, 0o400)
 	require.NoError(t, err)
 	t.Cleanup(func() {
-		_ = os.Chmod(schemaPath, 0600)
+		_ = os.Chmod(schemaPath, 0o600)
 	})
 
 	err = SaveSchema(schemaPath, &genai.Schema{Type: genai.TypeObject}, nil)
@@ -607,13 +609,13 @@ func TestSaveSchema_MarshalFail(t *testing.T) {
 func TestExtractRentalInfo_NoParts(t *testing.T) {
 	mockHome := mockUserHomeDir(t)
 	configDir := filepath.Join(mockHome, ".config", "soi-tro")
-	err := os.MkdirAll(configDir, 0700)
+	err := os.MkdirAll(configDir, 0o700)
 	require.NoError(t, err)
 	schemaPath := filepath.Join(configDir, "schema.json")
 	baseJSON := `{"type": "OBJECT", "properties": {}}`
 	signedBytes, err := analyzer.SignSchema([]byte(baseJSON))
 	require.NoError(t, err)
-	err = os.WriteFile(schemaPath, signedBytes, 0600)
+	err = os.WriteFile(schemaPath, signedBytes, 0o600)
 	require.NoError(t, err)
 
 	apiResponse := `{"candidates": [{"content": {"parts": []}}]}`
@@ -629,4 +631,27 @@ func TestExtractRentalInfo_NoParts(t *testing.T) {
 	_, err = c.ExtractRentalInfo(context.Background(), "Phòng trọ", nil, "", nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "no response candidates returned by Gemini")
+}
+
+//nolint:paralleltest,wsl_v5 // This test replaces process-wide logging and home-directory state.
+func TestExtractRentalInfo_LogsCorrelationWithoutSensitiveInput(t *testing.T) {
+	var output bytes.Buffer
+	originalLogger := slog.Default()
+	slog.SetDefault(slog.New(slog.NewJSONHandler(&output, nil)))
+	t.Cleanup(func() { slog.SetDefault(originalLogger) })
+
+	_ = mockUserHomeDir(t)
+	ctx := logger.WithRequestID(context.Background(), "request-log-test")
+	const sensitiveMarker = "LISTING-CONTACT-0912345678"
+
+	client := &Client{}
+	_, err := client.ExtractRentalInfo(ctx, sensitiveMarker, nil, "", nil)
+	require.Error(t, err)
+
+	logs := output.String()
+	assert.Contains(t, logs, `"operation":"gemini.extract_rental"`)
+	assert.Contains(t, logs, `"request_id":"request-log-test"`)
+	assert.Contains(t, logs, `"duration_ms":`)
+	assert.Contains(t, logs, `"error":"load_schema"`)
+	assert.NotContains(t, logs, sensitiveMarker)
 }

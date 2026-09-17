@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"bytes"
 	"context"
 	"log/slog"
 	"os"
@@ -24,7 +25,6 @@ func TestDefaultConfig(t *testing.T) {
 	if cfg.Console != true {
 		t.Errorf("Expected default console to be true")
 	}
-
 }
 
 func TestLoadFromEnv(t *testing.T) {
@@ -158,6 +158,20 @@ func TestContext(t *testing.T) {
 	if retrievedID != customID {
 		t.Errorf("Expected request ID to be '%s', got '%s'", customID, retrievedID)
 	}
+}
+
+//nolint:paralleltest,wsl_v5 // This test replaces the package-global logger.
+func TestFromContext(t *testing.T) {
+	resetLogger()
+	var output bytes.Buffer
+	globalLogger = slog.New(slog.NewJSONHandler(&output, nil))
+	t.Cleanup(resetLogger)
+
+	ctx := WithRequestID(context.Background(), "request-test-123")
+	FromContext(ctx).Info("context-aware event", "operation", "test.operation")
+
+	assert.Contains(t, output.String(), `"request_id":"request-test-123"`)
+	assert.Contains(t, output.String(), `"operation":"test.operation"`)
 }
 
 func TestInit_ErrorCases(t *testing.T) {

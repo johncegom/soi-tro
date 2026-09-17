@@ -73,6 +73,36 @@ func TestSaveAndLoadGlobalAPIKey(t *testing.T) {
 	is.Equal(testKey, loadedKey)
 }
 
+func TestValidateGeminiAPIKey(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		key     string
+		wantErr bool
+	}{
+		{name: "legacy key format", key: "AIzaSy-legacy-looking-key"},
+		{name: "opaque authorization key", key: "opaque-auth-key-without-legacy-prefix"},
+		{name: "surrounding whitespace", key: "  opaque-auth-key  "},
+		{name: "empty", key: "", wantErr: true},
+		{name: "whitespace only", key: " \t\r\n ", wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := validateGeminiAPIKey(tt.key)
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+
+			assert.NoError(t, err)
+		})
+	}
+}
+
 func TestEnsureSchemaFile(t *testing.T) {
 	_ = mockUserHomeDir(t)
 	is := assert.New(t)

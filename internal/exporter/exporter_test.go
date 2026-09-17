@@ -1,17 +1,18 @@
 package exporter_test
 
 import (
+	"bytes"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
+	"soi-tro/internal/exporter"
+	"soi-tro/internal/gemini"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"soi-tro/internal/exporter"
-	"soi-tro/internal/gemini"
 )
 
 func TestDefaultConfig(t *testing.T) {
@@ -145,7 +146,7 @@ func TestWriteResultAndActiveFilePath(t *testing.T) {
 
 		tmpDir := t.TempDir()
 		filePath := filepath.Join(tmpDir, "some_file")
-		err := os.WriteFile(filePath, []byte("hello"), 0644)
+		err := os.WriteFile(filePath, []byte("hello"), 0o600)
 		require.NoError(t, err)
 
 		cfg := exporter.Config{
@@ -169,7 +170,7 @@ func TestWriteResultAndActiveFilePath(t *testing.T) {
 		}
 
 		activePath := filepath.Join(tmpDir, "soi-tro-results-001.txt")
-		err := os.Mkdir(activePath, 0755)
+		err := os.Mkdir(activePath, 0o750)
 		require.NoError(t, err)
 
 		err = exporter.WriteResult(cfg, &gemini.RentalExtractionResult{}, nil)
@@ -597,4 +598,36 @@ func TestWriteResult_AdditionalNotesNotProvided(t *testing.T) {
 	content, err := os.ReadFile(activePath)
 	is.NoError(err)
 	is.NotContains(string(content), "Ghi chú thêm")
+}
+
+//nolint:paralleltest,wsl_v5 // This test replaces the process-wide slog default.
+func TestWriteResult_LogsSafeStructuredFields(t *testing.T) {
+	var output bytes.Buffer
+	originalLogger := slog.Default()
+	slog.SetDefault(slog.New(slog.NewJSONHandler(&output, nil)))
+	t.Cleanup(func() { slog.SetDefault(originalLogger) })
+
+	const sensitiveMarker = "PRIVATE-CONTACT-0912345678"
+	cfg := exporter.Config{Dir: t.TempDir(), MaxSizeKB: 1024}
+	result := &gemini.RentalExtractionResult{
+		PhoneNumber: sensitiveMarker,
+		RawFields:   map[string]string{"listing": sensitiveMarker},
+	}
+
+	require.NoError(t, exporter.WriteResult(cfg, result, nil))
+	logs := output.String()
+	assert.Contains(t, logs, `"operation":"export.write_result"`)
+	assert.Contains(t, logs, `"duration_ms":`)
+	assert.NotContains(t, logs, sensitiveMarker)
+
+	blockingFile := filepath.Join(t.TempDir(), "blocking-file")
+	require.NoError(t, os.WriteFile(blockingFile, []byte("x"), 0o600))
+	output.Reset()
+	err := exporter.WriteResult(exporter.Config{
+		Dir:       filepath.Join(blockingFile, "child"),
+		MaxSizeKB: 1024,
+	}, result, nil)
+	require.Error(t, err)
+	assert.Contains(t, output.String(), `"error":"create_directory"`)
+	assert.NotContains(t, output.String(), sensitiveMarker)
 }

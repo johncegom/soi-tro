@@ -1,68 +1,185 @@
 # AGENTS
 
-You must read the `docs/AGENTS.md` first.
+Read this file before working in the repository.
 
-# Instructions for AI Coding Agents (Antigravity / Gemini / Claude / Codex)
+Soi Trọ is a Go CLI that analyzes Vietnamese rental listings with Gemini,
+stores local history in SQLite, and exports reports. Changes can affect API
+keys, personal contact information, local user data, and released binaries.
 
-> [!IMPORTANT]
-> **File Modification Policy**:
-> Do not edit or create any files in the workspace automatically. 
-> You MUST present all proposed changes as a text diff or code block in the chat first, and wait for the user's explicit approval (strictly by typing "approved", case-insensitively) before executing any file edit or write tools.
+## Way of working
 
----
+This project uses Tier 2 (Standard): risk-based file authorization, a task
+ledger, bug log, and decision log. The repository has one primary human
+maintainer, but work continues across independent agent sessions and affects
+real user data.
 
-# Golang Toolchain Orchestration & Agent Skills Configuration
+- Task ledger: `docs/LEDGER.md`
+- Task details: `docs/tasks/<NNN>-<slug>.md` by default; use
+  `docs/tasks/<NNN>-<slug>/TASK.md` only when a task needs supporting artifacts
+- Bug log: `docs/BUGS.md`
+- Decision log: `docs/DECISIONS.md`
+- Existing backlog and older task history: `feature-plan.md`
 
-## 1. Core Persona & Operational Mandate
-You are an autonomous, high-efficiency Golang Core Engineer. Your primary directive is to construct concurrent, idiomatic, and highly performant CLI and backend systems.
+Read the ledger first, then open only the task documents relevant to the
+current work.
 
-**System Rule:** You MUST prioritize executing local/global skills from the `cc-skills-golang` library over generating unconstrained solutions from parametric memory. Writing pure text code without validating it against the skill definitions is an operational failure.
+## File-change authorization
 
----
+An explicit request to change, implement, build, or fix something authorizes
+ordinary in-scope workspace edits. Do not require a second approval for
+reversible changes that directly serve that request.
 
-## 2. Global Skill Discovery Paths
-The agent toolkit is registered across the following discovery paths. Scan these directories immediately upon initialization:
-- **Global Store:** `~/.antigravity/skills/cc-skills-golang/`
-- **Workspace Local:** `./.antigravity/skills/cc-skills-golang/`
+For substantial or resumable work, create a task document with a concrete
+Definition of Done and Test Plan before implementation. Small, localized work
+does not need a task document.
 
----
+Ask for explicit confirmation before:
 
-## 3. Explicit Skill Routing & Triggers
-When analyzing user prompts or workspace files, evaluate intent against these strict semantic triggers. If a condition is met, load the corresponding skill rules before emitting output:
+- destructive or difficult-to-recover operations;
+- database migrations or changes to generated user data;
+- handling credentials or changing security-sensitive access;
+- publishing, deploying, releasing, or causing another external side effect;
+- materially expanding the requested scope;
+- overwriting user work or resolving an unclear file target.
 
-### A. Code Quality
-*   **Triggers:** Code formatting, style guidelines, naming conventions, docstrings/comments, linters, error patterns, panic/recover, nil safety, struct/interface tags, security review, cryptography.
-*   **Skills:** `golang-code-style`, `golang-naming`, `golang-error-handling`, `golang-safety`, `golang-structs-interfaces`, `golang-documentation`, `golang-lint`, `golang-security`
-*   **Keywords:** `gofmt`, `goimports`, `errors.`, `fmt.Errorf`, `panic`, `recover`, `nil`, `struct tag`, `golangci-lint`, `secrets`, `crypto`, `injection`
+A request to answer, explain, review, diagnose, or propose changes does not
+authorize file edits. If the user requests a diff or proposal first, wait for
+approval before applying it.
 
-### B. Architecture & Design
-*   **Triggers:** Concurrency, context propagation, DI, design patterns, internal structures, database design, modern Go idioms.
-*   **Skills:** `golang-design-patterns`, `golang-concurrency`, `golang-context`, `golang-dependency-injection`, `golang-data-structures`, `golang-database`, `golang-modernize`
-*   **Keywords:** `go `, `chan`, `sync.`, `WaitGroup`, `Mutex`, `context.Context`, `select`, `functional options`, `builder`, `make([]`, `map[`, `sql.`, `tx`, `iterators`, `range-over`
+Before editing, inspect the worktree and preserve unrelated changes. After
+editing, run proportionate verification and summarize the changed files,
+results, and any deviation from the task plan.
 
-### C. QA & Performance
-*   **Triggers:** Testing, benchmarking, profiling, optimization, monitoring, continuous logging.
-*   **Skills:** `golang-testing`, `golang-benchmark`, `golang-performance`, `golang-troubleshooting`, `golang-observability`, `golang-stretchr-testify`
-*   **Keywords:** `testing.T`, `testing.B`, `b.Loop`, `pprof`, `trace`, `flamegraph`, `allocs`, `goleak`, `slog`, `otel`, `prometheus`
+## Program design
 
-### D. Project Start & Setup
-*   **Triggers:** Project directory layout, CLI design, Bubble Tea TUI, package dependencies, CI/CD pipelines.
-*   **Skills:** `golang-project-layout`, `golang-popular-libraries`, `golang-cli`, `golang-continuous-integration`, `golang-stay-updated`, `golang-dependency-management`
-*   **Keywords:** `cmd/`, `internal/`, `bubbletea`, `huh`, `go.mod`, `go.sum`, `github/workflows`, `npx skills`
+Add a Program design section before implementation when a task changes
+multiple interacting files or functions, or when an agent will generate a
+substantial amount of new code in one pass. Record:
 
-### E. Frameworks & Specialized Libraries
-*   **Triggers:** API development, DI frameworks, Cobra CLI, Viper configuration, samber helper libraries.
-*   **Skills:** `golang-grpc`, `golang-graphql`, `golang-swagger`, `golang-google-wire`, `golang-uber-dig`, `golang-uber-fx`, `golang-spf13-cobra`, `golang-spf13-viper`, `golang-samber-*`
-*   **Keywords:** `protobuf`, `grpc`, `graphql`, `swagger`, `wire.Build`, `fx.New`, `cobra.Command`, `viper.`, `samber-lo`, `samber-mo`, `samber-ro`, `samber-do`, `samber-hot`, `samber-slog`, `samber-oops`
+- types and interfaces being added or changed;
+- important method or function signatures;
+- the call graph, event flow, or data flow;
+- package boundaries when more than one package is involved.
 
----
+Small, localized, mechanical edits do not need a Program design section.
 
-## 4. Deterministic Execution Loop
-Before generating any markdown code blocks, terminal execution chains, or technical summaries, you must execute this loop sequentially:
+## Scope control
 
-1. **Trigger Scan:** Scan prompt and active files for trigger keywords listed in Section 3.
-2. **Context Activation:** Load `cc-skills-golang/skills/<skill>/SKILL.md` (and optional `references/*` on demand).
-3. **Verify Constraints:** Cross-check proposed implementation against the active skill's Core Principles and Common Mistakes.
-4. **Pre-flight Diagnosis:** Before proposing code edits, run local diagnostic commands (e.g. `go test`, `golangci-lint run`) if suggested by the skill's `Diagnose:` directive, confirming issues without auto-fixing them.
-5. **Interactive Diff Proposal:** Format proposed changes as a text diff or code block in the chat. **WAIT for explicit user approval (strictly by typing "approved", case-insensitively)** before running any write/edit tools.
-6. **Compile & Test Verification:** After user-approved file edits, verify correctness by executing `go build` and `go test`.
+Do not fold unrelated cleanup, stale documentation, or adjacent defects into
+the active task. Record them as a new ledger item, a bug, or a note to the
+user so they can be considered separately.
+
+## Bugs
+
+Log a defect when the product is already behaving incorrectly. Each entry
+must include its symptom, root cause or `unknown`, reachability through the
+current product, possible fixes when known, and status.
+
+Logging a bug does not authorize fixing it. Wait for a decision and the normal
+file-change approval. Report a live security exposure, active data-loss path,
+or other ongoing harm to the user immediately.
+
+## Decisions
+
+Record a decision when an informed reviewer could reasonably have chosen a
+different approach and would benefit from knowing why this one was selected.
+Routine or easily reversible choices do not need entries.
+
+## Build and verification
+
+Use the commands that match the change:
+
+```text
+go build ./...
+go test ./...
+go vet ./...
+golangci-lint run
+```
+
+The Taskfile also provides `task build`, `task test`, `task test:cover`, and
+`task test:race`. Note that `task build` invokes `go-winres@latest` and may
+require network access.
+
+Tests must not depend on a live Gemini request unless the task explicitly
+requires an integration test and the user approves using external services.
+Never print or commit API keys, personal contact details, or generated user
+data.
+
+## Proportionality
+
+Do not add an abstraction, defensive branch, dependency, or process step
+without a real and currently reachable reason. “Just in case” is not enough.
+
+## Recalibration
+
+Revisit this tier when:
+
+- another human maintainer joins;
+- the project starts handling more sensitive data, money, or credentials;
+- independent agent sessions become rare enough that the approval gate feels
+  ceremonial;
+- a required log stays stale across several tasks that should have updated it;
+- missing process repeatedly causes lost context or unreviewed scope changes.
+
+If an artifact becomes dead weight, propose retiring it. Archive logs that
+contain history, update this file, and leave old cross-references intact.
+
+## Execute / Advise / Grade / Dream
+
+Read `docs/execute-advise-grade-dream.md` for the design rationale. Follow
+these instructions during non-trivial tasks.
+
+**Execute.** Treat the primary session as Execute. When the task runner allows
+the Execute model to be selected, prefer `gpt-5.6-sol` with
+`reasoning_effort: medium`. Do not restart an active session merely to enforce
+this preference.
+
+**Advise.** When a decision is genuinely ambiguous and a wrong choice would be
+costly to reverse, pause Execute and spawn a separate agent with:
+
+- `model: gpt-5.6-sol`
+- `reasoning_effort: high`
+- no inherited conversation context
+
+Give the advisor only the decision and the minimum evidence needed to answer
+it. Do not send the whole transcript. Wait for its answer before continuing.
+If that advisor explicitly cannot resolve the decision or reports low
+confidence, retry once with `model: gpt-6-astra` and
+`reasoning_effort: medium`. Do not substitute another model silently.
+
+**Grade.** After finishing a non-trivial task with a Definition of Done and
+Test Plan, and before reporting it complete, spawn a fresh agent with:
+
+- `model: gpt-5.6-luna`
+- `reasoning_effort: high`
+- no inherited conversation context
+
+Give Grade only the approved rubric, the finished diff or output, and the
+verification results. Withhold the reasoning and discussion that produced
+them. Grade must return pass or fail and name every failed criterion. A failure
+defaults to a targeted fix followed by another fresh Grade pass. Restart the
+implementation from the approved design only when Grade shows that the core
+approach or its assumptions are invalid.
+
+**Dream.** Run Dream only after Grade passes and only when the completed work
+contains a durable decision that will help a later session. Spawn a separate
+agent with:
+
+- `model: gpt-6-astra`
+- `reasoning_effort: medium`
+- no automatically inherited conversation context
+
+Supply the full run history explicitly, including Execute's reasoning, Advise
+exchanges, and the Grade verdict. Dream drafts an entry for
+`docs/DECISIONS.md`, or says that no durable entry is warranted. Execute must
+still present the exact proposed entry and wait for the repository's normal
+file-change approval before writing it.
+
+Use the available agent-spawn tool, named `Agent` or `spawn_agent` depending on
+the runtime. When overriding the model, start the role with fresh context and
+pass only the material specified above.
+
+Re-run the EAGD bootstrap if a role fires on nearly every task, since its
+trigger or model is then too expensive for the value it adds. Recalibrate or
+remove a role that does not fire over a long period instead of keeping unused
+process.
