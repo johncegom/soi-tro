@@ -104,7 +104,7 @@ Bạn không cần cài đặt ngôn ngữ Go hay biên dịch mã nguồn, ch�
 
 ### 1. Yêu cầu hệ thống
 - Máy tính đã cài đặt **Go (Golang)** phiên bản **1.22** trở lên.
-- Một **Gemini API Key** hoạt động (bạn có thể nhận miễn phí tại [Google AI Studio](https://aistudio.google.com/)).
+- Một **Gemini API key / authorization key** hoạt động (bạn có thể tạo tại [Google AI Studio](https://aistudio.google.com/)).
 
 ### 2. Tải các thư viện phụ thuộc
 Di chuyển vào thư mục dự án và chạy lệnh sau để tải các package cần thiết:
@@ -120,6 +120,10 @@ Soi Trọ hỗ trợ cấu hình cực kỳ linh hoạt và an toàn:
   ```env
   GEMINI_API_KEY="MÃ_API_KEY_GEMINI_CỦA_BẠN"
   ```
+
+Soi Trọ coi giá trị khóa là thông tin xác thực dạng opaque và không yêu cầu một
+tiền tố cụ thể. Nếu Google AI Studio báo khóa tiêu chuẩn cũ không còn hợp lệ,
+hãy tạo authorization key thay thế rồi cập nhật cấu hình hoặc biến môi trường.
 
 ### 4. Khởi chạy ứng dụng
 Bạn có thể khởi chạy chương trình bằng nhiều cách:

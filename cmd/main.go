@@ -153,9 +153,9 @@ func main() {
 					fmt.Println("\n❌ LỖI KHỞI TẠO CLIENT GEMINI:")
 					fmt.Println("   Hãy đảm bảo bạn đã thiết lập biến môi trường GEMINI_API_KEY.")
 					fmt.Println("   Bạn có thể điền thông tin vào tệp bảo mật .env:")
-					fmt.Println("     GEMINI_API_KEY=\"AIzaSy...\"")
+					fmt.Println("     GEMINI_API_KEY=\"KHÓA_TỪ_GOOGLE_AI_STUDIO\"")
 					fmt.Println("   Hoặc chạy qua PowerShell:")
-					fmt.Println("     $env:GEMINI_API_KEY=\"AIzaSy...\"")
+					fmt.Println("     $env:GEMINI_API_KEY=\"KHÓA_TỪ_GOOGLE_AI_STUDIO\"")
 					os.Exit(1)
 				}
 
