@@ -1,14 +1,18 @@
 # Task Documents
 
-Create one directory per non-trivial task:
+Use one Markdown file per non-trivial task by default:
 
 ```text
-docs/tasks/<NNN>-<slug>/TASK.md
+docs/tasks/<NNN>-<slug>.md
 ```
 
-Use the next available ledger number. Keep task-specific discoveries here;
-put product defects in `docs/BUGS.md` and deliberate tradeoffs in
-`docs/DECISIONS.md`.
+Use the next available ledger number. Create
+`docs/tasks/<NNN>-<slug>/TASK.md` instead only when the task has supporting
+artifacts that belong beside it. Do not create a directory for a lone task
+document.
+
+Keep task-specific discoveries with the task; put product defects in
+`docs/BUGS.md` and deliberate tradeoffs in `docs/DECISIONS.md`.
 
 ## Template
 
