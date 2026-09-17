@@ -64,3 +64,32 @@ entirely would expose user data and release operations to avoidable mistakes.
 actions still stop for human confirmation. Agents must classify the request
 correctly, preserve unrelated worktree changes, verify their edits, and report
 what changed.
+
+## DECISION-004: Structured logging uses safe failure stages and existing context boundaries
+
+**Context:** Task 011 added structured logging to database, Gemini, and exporter
+operations. Returned errors can contain model responses or filesystem paths, so
+logging raw errors could expose sensitive data. Gemini operations already receive
+a context; database and exporter operations do not.
+
+**Decision:** Boundary events use `operation`, `duration_ms`, and, on failure, an
+`error` field containing a stable failure stage such as `generate_content` or
+`insert_record`. Original detailed errors continue to reach callers unchanged.
+`logger.LogOperationResult` centralizes this contract. Events omit credentials,
+listing bodies, images, schemas, contacts, model responses, report contents, and
+user paths. `request_id` is attached through `logger.FromContext(ctx)` where an
+existing context supplies it; APIs do not acquire context parameters solely for
+logging.
+
+**Alternatives considered:** Logging raw errors would provide more diagnostic
+detail but risk sensitive-data disclosure. Adding context parameters throughout
+database and exporter APIs would permit wider correlation but create API and
+caller changes without an existing request-lifecycle need. Separate result-logging
+implementations in each package would duplicate the same contract.
+
+**Consequences:** Logs identify the failing operation and stage without carrying
+the underlying payload. Diagnosis may require the detailed error returned to the
+caller. Request correlation remains limited to operations with an existing
+context. Future boundary logs should follow the shared contract and use safe
+stage values; context propagation can expand when an operation gains a concrete
+lifecycle or correlation requirement.

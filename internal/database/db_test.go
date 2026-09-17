@@ -1,14 +1,16 @@
 package database
 
 import (
+	"bytes"
+	"context"
+	"log/slog"
 	"os"
 	"path/filepath"
+	"soi-tro/internal/gemini"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"soi-tro/internal/gemini"
 )
 
 func mockDBPath(t *testing.T) string {
@@ -106,9 +108,9 @@ func TestInitDB_MkdirAllError(t *testing.T) {
 	mockHome := mockDBPath(t)
 
 	configDir := filepath.Join(mockHome, ".config", "soi-tro")
-	err := os.MkdirAll(filepath.Dir(configDir), 0700)
+	err := os.MkdirAll(filepath.Dir(configDir), 0o700)
 	require.NoError(t, err)
-	err = os.WriteFile(configDir, []byte("some-file"), 0600)
+	err = os.WriteFile(configDir, []byte("some-file"), 0o600)
 	require.NoError(t, err)
 
 	err = InitDB()
@@ -144,3 +146,36 @@ func TestListRentals_DBError(t *testing.T) {
 	assert.Error(t, err)
 }
 
+//nolint:paralleltest,wsl_v5 // This test replaces process-wide logging and database state.
+func TestSaveRental_LogsSafeStructuredFields(t *testing.T) {
+	var output bytes.Buffer
+	originalLogger := slog.Default()
+	slog.SetDefault(slog.New(slog.NewJSONHandler(&output, nil)))
+	t.Cleanup(func() { slog.SetDefault(originalLogger) })
+
+	_ = mockDBPath(t)
+	require.NoError(t, InitDB())
+	output.Reset()
+
+	const sensitiveMarker = "0912-SENSITIVE-CONTACT"
+	_, err := SaveRental(&gemini.RentalExtractionResult{
+		PhoneNumber: sensitiveMarker,
+		RawFields:   map[string]string{"listing": sensitiveMarker},
+	})
+	require.NoError(t, err)
+
+	logs := output.String()
+	assert.Contains(t, logs, `"operation":"database.save_rental"`)
+	assert.Contains(t, logs, `"duration_ms":`)
+	assert.NotContains(t, logs, sensitiveMarker)
+
+	require.NoError(t, func() error {
+		_, dropErr := DB.ExecContext(context.Background(), "DROP TABLE rentals")
+		return dropErr
+	}())
+	output.Reset()
+	_, err = SaveRental(&gemini.RentalExtractionResult{PhoneNumber: sensitiveMarker})
+	require.Error(t, err)
+	assert.Contains(t, output.String(), `"error":"insert_record"`)
+	assert.NotContains(t, output.String(), sensitiveMarker)
+}

@@ -1,7 +1,7 @@
 # Task: Finish structured-logging integration
 
-Proposed continuation of legacy Feature Plan Task 6. Core logging exists, but
-this remaining scope is not approved for implementation.
+Approved continuation of legacy Feature Plan Task 6. Core logging exists; this
+task integrates it at the remaining operational boundaries.
 
 ## Current baseline
 
@@ -13,19 +13,19 @@ this remaining scope is not approved for implementation.
 
 ## Definition of Done
 
-- [ ] Add structured logs at meaningful database, Gemini, and exporter operation
+- [x] Add structured logs at meaningful database, Gemini, and exporter operation
   boundaries; do not convert normal terminal UI output into diagnostic logs.
-- [ ] Use a small documented field vocabulary, including `operation`, `error`,
+- [x] Use a small documented field vocabulary, including `operation`, `error`,
   `duration_ms`, and `request_id` when one is available.
-- [ ] Never log API keys, raw listing bodies, images, schema contents, or personal
+- [x] Never log API keys, raw listing bodies, images, schema contents, or personal
   contact details.
-- [ ] Propagate correlation context only across call paths that already benefit
+- [x] Propagate correlation context only across call paths that already benefit
   from it, with targeted signature changes and cancellation preserved.
-- [ ] Document logger configuration, field conventions, safe/unsafe data, and
+- [x] Document logger configuration, field conventions, safe/unsafe data, and
   examples in `docs/logging.md`.
-- [ ] Cover configuration and new logging behavior without a live Gemini request
+- [x] Cover configuration and new logging behavior without a live Gemini request
   or writes to real user configuration paths.
-- [ ] Keep existing CLI behavior and exported report contents unchanged.
+- [x] Keep existing CLI behavior and exported report contents unchanged.
 
 ## Test Plan
 
@@ -41,8 +41,12 @@ this remaining scope is not approved for implementation.
 - Types/interfaces: continue using the standard `*slog.Logger`; do not introduce
   a duplicate logger interface or a custom application-error hierarchy.
 - Key signatures: reuse `logger.Get`, `logger.With`, `logger.NewContext`, and
-  `logger.GetRequestID`; add a context helper only if implementation shows that
-  repeated field attachment cannot remain at orchestration boundaries.
+  `logger.GetRequestID`; add `logger.FromContext(context.Context) *slog.Logger`
+  for the existing context-aware Gemini call path, plus
+  `logger.LogOperationResult(*slog.Logger, time.Time, string, error)` to keep
+  timing and safe failure fields identical across packages. Keep database and
+  exporter signatures unchanged because their UI call paths do not otherwise
+  need cancellation or correlation context.
 - Data flow: environment -> `logger.Config` -> process-wide logger; operation
   context -> safe structured attributes -> file/optional console handler.
 - Package/file layout: `internal/logger` owns setup and correlation helpers;
@@ -66,3 +70,22 @@ Core logging landed in `aa17051`; unimplemented rotation configuration and the
 unused custom-error package were removed in `6032c22`. This task replaces the
 legacy four-phase plan with the smallest remaining scope supported by current
 code and the repository's proportionality rule.
+
+The implementation logs stable, safe failure stages in the `error` field rather
+than raw returned errors. This keeps model responses, filesystem paths, listing
+text, and contact details out of diagnostic output while retaining the detailed
+errors returned to existing callers.
+
+Implemented on 2026-09-17. Verification passed with `go build ./...`,
+`go test ./...`, `go vet ./...`, and golangci-lint's PR-equivalent
+`--new-from-rev=HEAD` mode (zero new issues). The unscoped lint run still reports
+the repository's existing lint backlog. `go test -race ./...` could not run on
+this Windows host because the race detector requires CGO and no C compiler is
+installed; CI's Linux runner remains the verification path for that check.
+Interactive manual testing was replaced with handler-backed text/JSON and
+controlled success/failure tests to avoid touching real user configuration or
+calling Gemini.
+
+During implementation, review found that `database.ListRentals` does not check
+`rows.Err()` after iteration. The pre-existing defect is recorded as `BUG-001`
+in `docs/BUGS.md` and was not fixed as part of this task.
