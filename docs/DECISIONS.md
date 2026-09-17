@@ -93,3 +93,27 @@ caller. Request correlation remains limited to operations with an existing
 context. Future boundary logs should follow the shared contract and use safe
 stage values; context propagation can expand when an operation gains a concrete
 lifecycle or correlation requirement.
+
+## DECISION-005: Keep early product ideas separate from proposed tasks
+
+**Context:** Product ideas need a durable home before their scope, requirements,
+and verification criteria are clear. Putting every early idea directly into the
+task ledger would mix exploration with scoped work.
+
+**Decision:** Use `docs/IDEAS.md` as a single lightweight idea inbox. Track ideas
+as New, Exploring, Promoted, Parked, or Rejected. Promotion creates a Proposed
+ledger item and a task document with a Definition of Done, Test Plan, and Program
+design when required. Maintain links in both directions. Promotion records
+proposed work; it does not by itself authorize implementation.
+
+**Alternatives considered:** Recording all ideas directly in the ledger would
+avoid another file but blur the distinction between an interesting possibility
+and a scoped task. Creating a separate document for every idea would add
+maintenance before the idea warrants detailed planning.
+
+**Consequences:** Early ideas can be captured without premature task design.
+Promoted ideas remain traceable to their original context, while the ledger
+remains focused on scoped work. The inbox requires occasional status updates;
+avoid duplicating evolving task details there.
+
+**Status:** Accepted

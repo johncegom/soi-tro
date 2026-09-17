@@ -18,6 +18,9 @@ remain unapproved until the maintainer selects them for implementation.
 | 010 | Add Vietnamese rental-price normalization | Proposed | `docs/tasks/010-price-normalizer.md` |
 | 011 | Finish structured-logging integration | Complete | `docs/tasks/011-logging-integration.md` |
 | 012 | Flatten task-document layout | Complete | `docs/tasks/012-flatten-task-docs.md` |
+| 013 | Add personal deal-breaker filtering | Proposed | `docs/tasks/013-personal-deal-breaker-filter.md` |
+| 014 | Calculate true monthly and move-in costs | Proposed | `docs/tasks/014-true-rental-cost.md` |
+| 015 | Add viewing packs and a decision trail | Proposed | `docs/tasks/015-viewing-decision-trail.md` |
 
 ## Resume checklist
 
