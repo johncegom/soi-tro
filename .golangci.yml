@@ -113,7 +113,7 @@ linters:
         text: "G304"
       # Test tables repeat literals and write temp files by design.
       - path: _test\.go
-        linters: [dupl, goconst, funlen, errcheck] # table tests and env/file cleanup calls
+        linters: [dupl, goconst, funlen] # table tests
       - path: _test\.go
         linters: [gosec]
         text: "G306|G104" # temp files; cleanup calls
@@ -125,9 +125,6 @@ linters:
       ignore: [song, SONG, luôn] # Vietnamese reduplication: "song song", "luôn luôn"
     errcheck:
       check-type-assertions: true
-      exclude-functions:
-        - (*os.File).Close          # read-path defers; write paths close explicitly
-        - (*database/sql.Rows).Close
     exhaustive:
       default-signifies-exhaustive: true
     funlen:

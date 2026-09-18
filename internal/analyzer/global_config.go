@@ -98,7 +98,7 @@ func LoadGlobalAPIKey() (string, error) {
 		}
 		return "", fmt.Errorf("failed to open global config file: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	var cfg GlobalConfig
 	decoder := json.NewDecoder(file)
@@ -139,7 +139,7 @@ func SaveGlobalAPIKey(key string) error {
 	if err != nil {
 		return fmt.Errorf("failed to open global config file for writing: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	encoder := json.NewEncoder(file)
 	encoder.SetIndent("", "  ")
@@ -160,7 +160,7 @@ func GetGlobalModel() string {
 	if err != nil {
 		return DefaultModel
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	var cfg GlobalConfig
 	decoder := json.NewDecoder(file)

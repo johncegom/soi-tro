@@ -202,7 +202,7 @@ func ListRentals() (records []RentalRecord, err error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	for rows.Next() {
 		var rec RentalRecord

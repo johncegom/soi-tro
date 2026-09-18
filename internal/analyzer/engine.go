@@ -37,12 +37,16 @@ func SaveConfig(filePath string, config *Config) error {
 	if err != nil {
 		return fmt.Errorf("failed to open config file for writing: %w", err)
 	}
-	defer file.Close()
 
 	encoder := json.NewEncoder(file)
 	encoder.SetIndent("", "  ")
 	if err := encoder.Encode(config); err != nil {
+		_ = file.Close()
 		return fmt.Errorf("failed to encode config JSON: %w", err)
+	}
+
+	if err := file.Close(); err != nil {
+		return fmt.Errorf("failed to close config file: %w", err)
 	}
 
 	return nil

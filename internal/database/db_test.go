@@ -38,7 +38,7 @@ func TestDBOperations(t *testing.T) {
 
 	err := InitDB()
 	require.NoError(t, err)
-	defer DB.Close()
+	defer func() { _ = DB.Close() }()
 
 	rental := &gemini.RentalExtractionResult{
 		Price:           "5 triệu/tháng",
@@ -181,7 +181,7 @@ func TestSaveRental_DBError(t *testing.T) {
 	_ = mockDBPath(t)
 	err := InitDB()
 	require.NoError(t, err)
-	defer DB.Close()
+	defer func() { _ = DB.Close() }()
 
 	_, err = DB.ExecContext(context.Background(), "DROP TABLE rentals")
 	require.NoError(t, err)
@@ -196,7 +196,7 @@ func TestListRentals_DBError(t *testing.T) {
 	_ = mockDBPath(t)
 	err := InitDB()
 	require.NoError(t, err)
-	defer DB.Close()
+	defer func() { _ = DB.Close() }()
 
 	_, err = DB.ExecContext(context.Background(), "DROP TABLE rentals")
 	require.NoError(t, err)

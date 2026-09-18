@@ -93,10 +93,13 @@ Phase 3, test what matters:
 - Phase 2 deviations from the plan above: `main` carries a temporary
   `//nolint:gocyclo,funlen` until Phase 3 extracts `run` (lint had to exit 0);
   3.2 (`t.Setenv`) was pulled into Phase 2 because `usetesting` blocked green;
-  extra exclusions added on evidence: `errcheck`/`funlen`/gosec G104 in tests,
-  `(*os.File).Close` and `(*sql.Rows).Close` read-path defers, testifylint
+  extra exclusions added on evidence: `funlen`/gosec G104 in tests, testifylint
   `require-error`, dupword ignore for Vietnamese reduplication ("song song",
   "luôn luôn") after `--fix` rewrote user-facing strings.
+- errcheck stays on for tests and for `Close`: re-enabling it after the first
+  pass exposed `SaveConfig` in `internal/analyzer/engine.go` as a third write
+  path with a deferred, unchecked Close. Read-path defers use
+  `defer func() { _ = f.Close() }()`.
 - Deliberately out of scope: splitting the three UI render functions (cosmetic
   until one has a bug); the duplicate gosec job in `security.yml` (runs
   `-no-fail`, never blocks, free SARIF dashboard, keep); parameterizing SQL

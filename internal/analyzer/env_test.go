@@ -86,8 +86,8 @@ func TestLoadEnv(t *testing.T) {
 
 		// Clean up environment variables afterwards
 		t.Cleanup(func() {
-			os.Unsetenv("TEST_KEY_LOAD_ENV")
-			os.Unsetenv("ANOTHER_TEST_KEY")
+			_ = os.Unsetenv("TEST_KEY_LOAD_ENV")
+			_ = os.Unsetenv("ANOTHER_TEST_KEY")
 		})
 
 		// Load the env file
@@ -107,8 +107,8 @@ func TestLoadEnv(t *testing.T) {
 		require.NoError(t, err)
 
 		t.Cleanup(func() {
-			os.Unsetenv("KEY1")
-			os.Unsetenv("KEY2")
+			_ = os.Unsetenv("KEY1")
+			_ = os.Unsetenv("KEY2")
 		})
 
 		err = LoadEnv(envFile)
@@ -125,8 +125,8 @@ func TestLoadEnv(t *testing.T) {
 		require.NoError(t, err)
 
 		t.Cleanup(func() {
-			os.Unsetenv("KEY_ONE")
-			os.Unsetenv("KEY_TWO")
+			_ = os.Unsetenv("KEY_ONE")
+			_ = os.Unsetenv("KEY_TWO")
 		})
 
 		err = LoadEnv(envFile)
@@ -143,8 +143,8 @@ func TestLoadEnv(t *testing.T) {
 		require.NoError(t, err)
 
 		t.Cleanup(func() {
-			os.Unsetenv("DOUBLE_QUOTED")
-			os.Unsetenv("SINGLE_QUOTED")
+			_ = os.Unsetenv("DOUBLE_QUOTED")
+			_ = os.Unsetenv("SINGLE_QUOTED")
 		})
 
 		err = LoadEnv(envFile)
@@ -161,8 +161,8 @@ func TestLoadEnv(t *testing.T) {
 		require.NoError(t, err)
 
 		t.Cleanup(func() {
-			os.Unsetenv("VALID_KEY")
-			os.Unsetenv("ANOTHER_VALID")
+			_ = os.Unsetenv("VALID_KEY")
+			_ = os.Unsetenv("ANOTHER_VALID")
 		})
 
 		err = LoadEnv(envFile)

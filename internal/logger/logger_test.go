@@ -110,8 +110,8 @@ func TestInit(t *testing.T) {
 	logPath := filepath.Join(tmpDir, "soi-tro-test.log")
 
 	// Clean up any existing test file
-	os.Remove(logPath)
-	defer os.Remove(logPath)
+	_ = os.Remove(logPath)
+	defer func() { _ = os.Remove(logPath) }()
 
 	cfg := Config{
 		Level:      "debug",
@@ -220,8 +220,8 @@ func TestInit_DifferentLevels(t *testing.T) {
 	for _, level := range levels {
 		t.Run(level, func(t *testing.T) {
 			logPath := filepath.Join(tmpDir, "soi-tro-test-"+level+".log")
-			os.Remove(logPath)
-			defer os.Remove(logPath)
+			_ = os.Remove(logPath)
+			defer func() { _ = os.Remove(logPath) }()
 
 			cfg := Config{
 				Level:      level,
@@ -245,8 +245,8 @@ func TestInit_DifferentFormats(t *testing.T) {
 	for _, format := range formats {
 		t.Run(format, func(t *testing.T) {
 			logPath := filepath.Join(tmpDir, "soi-tro-test-"+format+".log")
-			os.Remove(logPath)
-			defer os.Remove(logPath)
+			_ = os.Remove(logPath)
+			defer func() { _ = os.Remove(logPath) }()
 
 			cfg := Config{
 				Level:      "info",
@@ -266,8 +266,8 @@ func TestInit_DifferentFormats(t *testing.T) {
 func TestInit_WithConsole(t *testing.T) {
 	tmpDir := os.TempDir()
 	logPath := filepath.Join(tmpDir, "soi-tro-test-console.log")
-	os.Remove(logPath)
-	defer os.Remove(logPath)
+	_ = os.Remove(logPath)
+	defer func() { _ = os.Remove(logPath) }()
 
 	cfg := Config{
 		Level:      "info",
@@ -285,8 +285,8 @@ func TestInit_WithConsole(t *testing.T) {
 func TestInit_WithConsoleJSON(t *testing.T) {
 	tmpDir := os.TempDir()
 	logPath := filepath.Join(tmpDir, "soi-tro-test-console-json.log")
-	os.Remove(logPath)
-	defer os.Remove(logPath)
+	_ = os.Remove(logPath)
+	defer func() { _ = os.Remove(logPath) }()
 
 	cfg := Config{
 		Level:      "info",
@@ -320,8 +320,8 @@ func TestInit_InvalidDirectory(t *testing.T) {
 func TestLoggingFunctions(t *testing.T) {
 	tmpDir := os.TempDir()
 	logPath := filepath.Join(tmpDir, "soi-tro-test-functions.log")
-	os.Remove(logPath)
-	defer os.Remove(logPath)
+	_ = os.Remove(logPath)
+	defer func() { _ = os.Remove(logPath) }()
 
 	cfg := Config{
 		Level:      "debug",
@@ -355,8 +355,8 @@ func TestGet_Fallback(t *testing.T) {
 func TestWith(t *testing.T) {
 	tmpDir := os.TempDir()
 	logPath := filepath.Join(tmpDir, "soi-tro-test-with.log")
-	os.Remove(logPath)
-	defer os.Remove(logPath)
+	_ = os.Remove(logPath)
+	defer func() { _ = os.Remove(logPath) }()
 
 	cfg := Config{
 		Level:      "info",
@@ -378,8 +378,8 @@ func TestWith(t *testing.T) {
 func TestInit_DefaultLevel(t *testing.T) {
 	tmpDir := os.TempDir()
 	logPath := filepath.Join(tmpDir, "soi-tro-test-default-level.log")
-	os.Remove(logPath)
-	defer os.Remove(logPath)
+	_ = os.Remove(logPath)
+	defer func() { _ = os.Remove(logPath) }()
 
 	cfg := Config{
 		Level:      "info", // Valid level
@@ -402,8 +402,8 @@ func TestInit_DefaultLevel(t *testing.T) {
 func TestInit_WithWhitespaceLevel(t *testing.T) {
 	tmpDir := os.TempDir()
 	logPath := filepath.Join(tmpDir, "soi-tro-test-whitespace.log")
-	os.Remove(logPath)
-	defer os.Remove(logPath)
+	_ = os.Remove(logPath)
+	defer func() { _ = os.Remove(logPath) }()
 
 	cfg := Config{
 		Level:      " info ", // Should fail validation
