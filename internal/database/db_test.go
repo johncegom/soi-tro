@@ -85,10 +85,12 @@ func TestDBOperations(t *testing.T) {
 	assert.Len(t, records, 0)
 }
 
+//nolint:paralleltest // Shares process-wide DB state via mockDBPath with other tests in this package.
 func TestSaveRental_UnparsablePriceLeavesPriceVNDNil(t *testing.T) {
 	_ = mockDBPath(t)
 	require.NoError(t, InitDB())
-	defer DB.Close()
+
+	defer func() { _ = DB.Close() }()
 
 	id, err := SaveRental(&gemini.RentalExtractionResult{Price: "thoả thuận"})
 	require.NoError(t, err)
@@ -100,6 +102,7 @@ func TestSaveRental_UnparsablePriceLeavesPriceVNDNil(t *testing.T) {
 	assert.Nil(t, records[0].PriceVND)
 }
 
+//nolint:paralleltest // Shares process-wide DB state via mockDBPath with other tests in this package.
 func TestInitDB_MigratesLegacySchemaMissingPriceVND(t *testing.T) {
 	mockHome := mockDBPath(t)
 
@@ -108,7 +111,7 @@ func TestInitDB_MigratesLegacySchemaMissingPriceVND(t *testing.T) {
 
 	legacyDB, err := sql.Open("sqlite", dbPath)
 	require.NoError(t, err)
-	_, err = legacyDB.Exec(`
+	_, err = legacyDB.ExecContext(context.Background(), `
 	CREATE TABLE rentals (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -126,7 +129,7 @@ func TestInitDB_MigratesLegacySchemaMissingPriceVND(t *testing.T) {
 		sample_messages TEXT
 	);`)
 	require.NoError(t, err)
-	_, err = legacyDB.Exec(`
+	_, err = legacyDB.ExecContext(context.Background(), `
 	INSERT INTO rentals (
 		price, deposit, floor, electricity, water, parking_fee, pets_allowed, phone_number, additional_notes, raw_fields, missing_fields, sample_messages
 	) VALUES ('4.5tr', '', '', '', '', '', '', '', '', '{}', '[]', '[]')`)
@@ -134,7 +137,8 @@ func TestInitDB_MigratesLegacySchemaMissingPriceVND(t *testing.T) {
 	require.NoError(t, legacyDB.Close())
 
 	require.NoError(t, InitDB())
-	defer DB.Close()
+
+	defer func() { _ = DB.Close() }()
 
 	records, err := ListRentals()
 	require.NoError(t, err)
@@ -147,6 +151,7 @@ func TestInitDB_MigratesLegacySchemaMissingPriceVND(t *testing.T) {
 	records, err = ListRentals()
 	require.NoError(t, err)
 	require.Len(t, records, 2)
+
 	for _, rec := range records {
 		if rec.ID == id {
 			require.NotNil(t, rec.PriceVND)

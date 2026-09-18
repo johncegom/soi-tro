@@ -8,6 +8,8 @@ import (
 )
 
 func TestParseVND(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		name    string
 		input   string
@@ -45,16 +47,21 @@ func TestParseVND(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
 			got, err := ParseVND(tt.input)
 			if tt.wantErr {
 				if err == nil {
 					t.Fatalf("ParseVND(%q) = %d, nil; want error", tt.input, got)
 				}
+
 				return
 			}
+
 			if err != nil {
 				t.Fatalf("ParseVND(%q) returned unexpected error: %v", tt.input, err)
 			}
+
 			if got != tt.want {
 				t.Fatalf("ParseVND(%q) = %d; want %d", tt.input, got, tt.want)
 			}
@@ -66,13 +73,16 @@ func TestParseVND(t *testing.T) {
 // docs/price-normalization.md's manual test plan against the parser, so the
 // documented examples stay correct as the grammar evolves.
 func TestParseVND_ManualDataset(t *testing.T) {
+	t.Parallel()
+
 	f, err := os.Open("testdata/manual_price_dataset.csv")
 	if err != nil {
 		t.Fatalf("failed to open manual dataset: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	r := csv.NewReader(f)
+
 	rows, err := r.ReadAll()
 	if err != nil {
 		t.Fatalf("failed to read manual dataset: %v", err)
@@ -83,16 +93,19 @@ func TestParseVND_ManualDataset(t *testing.T) {
 		input, expectedVND, expectedResult := row[0], row[1], row[2]
 
 		got, err := ParseVND(input)
+
 		switch expectedResult {
 		case "accept":
 			if err != nil {
 				t.Errorf("line %d: ParseVND(%q) returned unexpected error: %v", line, input, err)
 				continue
 			}
+
 			want, parseErr := strconv.ParseInt(expectedVND, 10, 64)
 			if parseErr != nil {
 				t.Fatalf("line %d: dataset has invalid expected_vnd %q: %v", line, expectedVND, parseErr)
 			}
+
 			if got != want {
 				t.Errorf("line %d: ParseVND(%q) = %d; want %d", line, input, got, want)
 			}
@@ -115,7 +128,7 @@ func FuzzParseVND(f *testing.F) {
 		f.Add(s)
 	}
 
-	f.Fuzz(func(t *testing.T, input string) {
+	f.Fuzz(func(_ *testing.T, input string) {
 		// The parser must never panic; the returned error (if any) is not
 		// otherwise checked since arbitrary fuzz input has no known answer.
 		_, _ = ParseVND(input)

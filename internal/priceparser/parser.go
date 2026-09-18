@@ -53,9 +53,39 @@ var (
 // amount. It returns an error instead of guessing when the input is
 // ambiguous or malformed.
 func ParseVND(raw string) (int64, error) {
+	work, err := normalize(raw)
+	if err != nil {
+		return 0, err
+	}
+
+	switch {
+	case trTenthRe.MatchString(work):
+		m := trTenthRe.FindStringSubmatch(work)
+		return wholeWithTenth(raw, m[1], m[2], million)
+	case trDecimalRe.MatchString(work):
+		m := trDecimalRe.FindStringSubmatch(work)
+		return decimalTimes(raw, m[1], m[2], million)
+	case kDecimalRe.MatchString(work):
+		m := kDecimalRe.FindStringSubmatch(work)
+		return decimalTimes(raw, m[1], m[2], thousand)
+	case kIntRe.MatchString(work):
+		m := kIntRe.FindStringSubmatch(work)
+		return wholeTimes(raw, m[1], thousand)
+	case thousandsGroupRe.MatchString(work):
+		return parseThousandsGroup(raw, work)
+	case plainIntRe.MatchString(work):
+		return parseLiteral(raw, work)
+	default:
+		return 0, fmt.Errorf("price %q does not match a supported or unambiguous format", raw)
+	}
+}
+
+// normalize lowercases raw, strips a trailing rent period and currency
+// marker, and expands accepted unit spellings, ready for pattern matching.
+func normalize(raw string) (string, error) {
 	work := strings.ToLower(strings.TrimSpace(raw))
 	if work == "" {
-		return 0, fmt.Errorf("price %q is empty", raw)
+		return "", fmt.Errorf("price %q is empty", raw)
 	}
 
 	work = periodSuffixRe.ReplaceAllString(work, "")
@@ -76,59 +106,36 @@ func ParseVND(raw string) (int64, error) {
 	).Replace(work)
 
 	if work == "" {
-		return 0, fmt.Errorf("price %q has no numeric content", raw)
+		return "", fmt.Errorf("price %q has no numeric content", raw)
 	}
 
-	switch {
-	case trTenthRe.MatchString(work):
-		m := trTenthRe.FindStringSubmatch(work)
-		return wholeWithTenth(raw, m[1], m[2], million)
-	case trDecimalRe.MatchString(work):
-		m := trDecimalRe.FindStringSubmatch(work)
-		return decimalTimes(raw, m[1], m[2], million)
-	case kDecimalRe.MatchString(work):
-		m := kDecimalRe.FindStringSubmatch(work)
-		return decimalTimes(raw, m[1], m[2], thousand)
-	case kIntRe.MatchString(work):
-		m := kIntRe.FindStringSubmatch(work)
-		base, err := strconv.ParseInt(m[1], 10, 64)
-		if err != nil {
-			return 0, fmt.Errorf("price %q has an invalid whole number: %w", raw, err)
-		}
-		return base * thousand, nil
-	case thousandsGroupRe.MatchString(work):
-		vnd, err := strconv.ParseInt(strings.ReplaceAll(work, ".", ""), 10, 64)
-		if err != nil {
-			return 0, fmt.Errorf("price %q is not a valid number: %w", raw, err)
-		}
-		return vnd, nil
-	case plainIntRe.MatchString(work):
-		vnd, err := strconv.ParseInt(work, 10, 64)
-		if err != nil {
-			return 0, fmt.Errorf("price %q is not a valid number: %w", raw, err)
-		}
-		if vnd != 0 && vnd < minLiteral {
-			return 0, fmt.Errorf("price %q is too small to be an unambiguous VND amount", raw)
-		}
-		return vnd, nil
-	default:
-		return 0, fmt.Errorf("price %q does not match a supported or unambiguous format", raw)
-	}
+	return work, nil
 }
 
-func wholeWithTenth(raw, wholePart, tenthPart string, multiplier int64) (int64, error) {
-	whole, err := strconv.ParseInt(wholePart, 10, 64)
+func wholeTimes(raw, wholePart string, multiplier int64) (int64, error) {
+	base, err := strconv.ParseInt(wholePart, 10, 64)
 	if err != nil {
 		return 0, fmt.Errorf("price %q has an invalid whole number: %w", raw, err)
 	}
-	vnd := whole * multiplier
+
+	return base * multiplier, nil
+}
+
+func wholeWithTenth(raw, wholePart, tenthPart string, multiplier int64) (int64, error) {
+	vnd, err := wholeTimes(raw, wholePart, multiplier)
+	if err != nil {
+		return 0, err
+	}
+
 	if tenthPart != "" {
 		tenth, err := strconv.ParseInt(tenthPart, 10, 64)
 		if err != nil {
 			return 0, fmt.Errorf("price %q has an invalid tenths digit: %w", raw, err)
 		}
+
 		vnd += tenth * tenthMillion
 	}
+
 	return vnd, nil
 }
 
@@ -139,6 +146,7 @@ func decimalTimes(raw, wholePart, fracPart string, multiplier int64) (int64, err
 	if err != nil {
 		return 0, fmt.Errorf("price %q has an invalid whole number: %w", raw, err)
 	}
+
 	frac, err := strconv.ParseInt(fracPart, 10, 64)
 	if err != nil {
 		return 0, fmt.Errorf("price %q has an invalid decimal number: %w", raw, err)
@@ -150,9 +158,36 @@ func decimalTimes(raw, wholePart, fracPart string, multiplier int64) (int64, err
 	}
 
 	numerator := whole*denom + frac
+
 	scaled := numerator * multiplier
 	if scaled%denom != 0 {
 		return 0, fmt.Errorf("price %q does not resolve to a whole VND amount", raw)
 	}
+
 	return scaled / denom, nil
+}
+
+// parseThousandsGroup parses a dot-grouped literal such as "4.500.000".
+func parseThousandsGroup(raw, work string) (int64, error) {
+	vnd, err := strconv.ParseInt(strings.ReplaceAll(work, ".", ""), 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("price %q is not a valid number: %w", raw, err)
+	}
+
+	return vnd, nil
+}
+
+// parseLiteral parses a bare integer, rejecting values too small to be an
+// unambiguous VND amount.
+func parseLiteral(raw, work string) (int64, error) {
+	vnd, err := strconv.ParseInt(work, 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("price %q is not a valid number: %w", raw, err)
+	}
+
+	if vnd != 0 && vnd < minLiteral {
+		return 0, fmt.Errorf("price %q is too small to be an unambiguous VND amount", raw)
+	}
+
+	return vnd, nil
 }

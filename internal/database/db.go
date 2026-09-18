@@ -83,13 +83,13 @@ func InitDB() (err error) {
 
 	failureStage = "create_schema"
 	if _, err = db.ExecContext(ctx, query); err != nil {
-		db.Close()
+		_ = db.Close()
 		return fmt.Errorf("failed to create table: %w", err)
 	}
 
 	failureStage = "migrate_schema"
 	if err = addColumnIfMissing(ctx, db, "rentals", "price_vnd", "INTEGER"); err != nil {
-		db.Close()
+		_ = db.Close()
 		return err
 	}
 
@@ -104,7 +104,7 @@ func addColumnIfMissing(ctx context.Context, db *sql.DB, table, column, sqlType 
 	if err != nil {
 		return fmt.Errorf("failed to inspect %s schema: %w", table, err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var (
 		cid        int
@@ -114,14 +114,17 @@ func addColumnIfMissing(ctx context.Context, db *sql.DB, table, column, sqlType 
 		defaultVal sql.NullString
 		pk         int
 	)
+
 	for rows.Next() {
 		if err := rows.Scan(&cid, &name, &colType, &notNull, &defaultVal, &pk); err != nil {
 			return fmt.Errorf("failed to read %s schema: %w", table, err)
 		}
+
 		if name == column {
 			return nil
 		}
 	}
+
 	if err := rows.Err(); err != nil {
 		return fmt.Errorf("failed to read %s schema: %w", table, err)
 	}
@@ -129,6 +132,7 @@ func addColumnIfMissing(ctx context.Context, db *sql.DB, table, column, sqlType 
 	if _, err := db.ExecContext(ctx, fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s", table, column, sqlType)); err != nil {
 		return fmt.Errorf("failed to add %s.%s column: %w", table, column, err)
 	}
+
 	return nil
 }
 
