@@ -15,7 +15,7 @@ remain unapproved until the maintainer selects them for implementation.
 | 007 | Add CI quality and security gates | Complete | `docs/tasks/007-ci-quality-security.md` |
 | 008 | Add batch directory processing | Proposed | `docs/tasks/008-batch-processing.md` |
 | 009 | Add customizable message templates | Proposed | `docs/tasks/009-message-templates.md` |
-| 010 | Add Vietnamese rental-price normalization | Proposed | `docs/tasks/010-price-normalizer.md` |
+| 010 | Add Vietnamese rental-price normalization | Complete | `docs/tasks/010-price-normalizer.md` |
 | 011 | Finish structured-logging integration | Complete | `docs/tasks/011-logging-integration.md` |
 | 012 | Flatten task-document layout | Complete | `docs/tasks/012-flatten-task-docs.md` |
 | 013 | Add personal deal-breaker filtering | Proposed | `docs/tasks/013-personal-deal-breaker-filter.md` |
