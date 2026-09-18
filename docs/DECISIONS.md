@@ -158,3 +158,27 @@ CVEs in transitive deps pulled in via the Gemini SDK — all fixed before merge.
 ~670 pre-existing lint findings in `internal/ui`/`scripts` remain unaddressed and
 need a dedicated cleanup task. Structured logging still isn't wired into several
 packages (see follow-up task).
+
+## DECISION-008: Store normalized rental price now, defer sort/filter query and UI
+
+**Context:** Task 010 required deciding whether Vietnamese rental-price
+normalization (`4tr5`, `4.5tr`, `4500k`, `4.5 triệu`, `4m5`, ...) is
+display-only, stored in SQLite, or used for sorting/filtering. The maintainer
+chose store + sorting/filtering, which requires a schema change.
+
+**Decision:** Add `internal/priceparser.ParseVND`, independent of `gemini`
+and `ui`, and persist its result in a new nullable `price_vnd INTEGER`
+column via `database.SaveRental`. `InitDB` migrates existing databases that
+predate the column. Do not add a sort/filter query or UI control yet: the
+Definition of Done only required the value to exist and be storable, and no
+current feature consumes it.
+
+**Alternatives considered:** Building a `ListRentalsSortedByPrice` query and a
+"sort by price" UI control now would satisfy the maintainer's stated future
+intent, but would add exported surface area and UI flow with no caller,
+violating proportionality until a concrete feature needs it.
+
+**Consequences:** Newly saved rentals carry a normalized price ready for
+sorting/filtering. Rows saved before this change have `price_vnd = NULL`
+until re-saved. The next task that needs price-based sorting or filtering
+can query `price_vnd` directly without further schema work.

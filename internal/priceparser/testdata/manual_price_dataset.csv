@@ -1,0 +1,47 @@
+input,expected_vnd,expected_result,note
+4tr,4000000,accept,
+4tr5,4500000,accept,
+4m5,4500000,accept,
+4.5tr,4500000,accept,
+"4,5tr",4500000,accept,
+4.5 triệu,4500000,accept,
+4.5 TRIỆU,4500000,accept,case insensitive
+"  4.5tr  ",4500000,accept,surrounding whitespace
+4trieu5,4500000,accept,
+4500k,4500000,accept,
+4.5k,4500,accept,
+"4,5k",4500,accept,
+500k,500000,accept,
+4.500.000,4500000,accept,dot-grouped literal
+4.500.000đ,4500000,accept,currency marker
+4.500.000 vnd,4500000,accept,currency marker with space
+4.500.000vnđ,4500000,accept,currency marker
+5000000,5000000,accept,bare integer literal
+1000,1000,accept,minimum bare integer
+0,0,accept,explicit free rent
+5 triệu/tháng,5000000,accept,period suffix
+4.5tr/tháng,4500000,accept,period suffix
+500k/tuần,500000,accept,period suffix
+2tr/ngày,2000000,accept,period suffix
+10tr/năm,10000000,accept,period suffix
+4tr0,4000000,accept,explicit zero tenths
+100tr,100000000,accept,
+7tr9,7900000,accept,
+4.500,4500,accept,single 3-digit dot group is a literal thousands amount
+,,reject,empty
+"   ",,reject,whitespace only
+4.5,,reject,bare decimal without a unit is ambiguous
+999,,reject,below the 1000 minimum
+1,,reject,below the 1000 minimum
+-4tr,,reject,negative
+4tr5k,,reject,multiple units
+4tr-5,,reject,malformed
+4.50,,reject,dot group is not exactly 3 digits
+thoả thuận,,reject,non numeric
+liên hệ,,reject,non numeric
+4.1234567tr,,reject,does not resolve to a whole VND amount
+4.1234k,,reject,does not resolve to a whole VND amount
+99999999999999999999tr,,reject,overflow
+4..5tr,,reject,malformed
+tr5,,reject,missing whole number
+4trm,,reject,malformed unit

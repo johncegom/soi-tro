@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"soi-tro/internal/gemini"
 	"soi-tro/internal/logger"
+	"soi-tro/internal/priceparser"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -19,7 +20,10 @@ var DB *sql.DB
 type RentalRecord struct {
 	ID        int64
 	CreatedAt string
-	Result    *gemini.RentalExtractionResult
+	// PriceVND is the normalized VND amount for Result.Price, or nil when
+	// the listed price could not be unambiguously parsed.
+	PriceVND *int64
+	Result   *gemini.RentalExtractionResult
 }
 
 func GetDBPath() (string, error) {
@@ -61,6 +65,7 @@ func InitDB() (err error) {
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		price TEXT,
+		price_vnd INTEGER,
 		deposit TEXT,
 		floor TEXT,
 		electricity TEXT,
@@ -74,13 +79,60 @@ func InitDB() (err error) {
 		sample_messages TEXT
 	);`
 
+	ctx := context.Background()
+
 	failureStage = "create_schema"
-	if _, err = db.ExecContext(context.Background(), query); err != nil {
-		db.Close()
+	if _, err = db.ExecContext(ctx, query); err != nil {
+		_ = db.Close()
 		return fmt.Errorf("failed to create table: %w", err)
 	}
 
+	failureStage = "migrate_schema"
+	if err = addColumnIfMissing(ctx, db, "rentals", "price_vnd", "INTEGER"); err != nil {
+		_ = db.Close()
+		return err
+	}
+
 	DB = db
+	return nil
+}
+
+// addColumnIfMissing adds a nullable column to an existing table when a
+// database created before that column existed is opened again.
+func addColumnIfMissing(ctx context.Context, db *sql.DB, table, column, sqlType string) error {
+	rows, err := db.QueryContext(ctx, fmt.Sprintf("PRAGMA table_info(%s)", table))
+	if err != nil {
+		return fmt.Errorf("failed to inspect %s schema: %w", table, err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	var (
+		cid        int
+		name       string
+		colType    string
+		notNull    int
+		defaultVal sql.NullString
+		pk         int
+	)
+
+	for rows.Next() {
+		if err := rows.Scan(&cid, &name, &colType, &notNull, &defaultVal, &pk); err != nil {
+			return fmt.Errorf("failed to read %s schema: %w", table, err)
+		}
+
+		if name == column {
+			return nil
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("failed to read %s schema: %w", table, err)
+	}
+
+	if _, err := db.ExecContext(ctx, fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s", table, column, sqlType)); err != nil {
+		return fmt.Errorf("failed to add %s.%s column: %w", table, column, err)
+	}
+
 	return nil
 }
 
@@ -108,12 +160,17 @@ func SaveRental(result *gemini.RentalExtractionResult) (id int64, err error) {
 		return 0, err
 	}
 
+	var priceVND sql.NullInt64
+	if vnd, perr := priceparser.ParseVND(result.Price); perr == nil {
+		priceVND = sql.NullInt64{Int64: vnd, Valid: true}
+	}
+
 	failureStage = "insert_record"
 	res, err := DB.ExecContext(context.Background(), `
 		INSERT INTO rentals (
-			price, deposit, floor, electricity, water, parking_fee, pets_allowed, phone_number, additional_notes, raw_fields, missing_fields, sample_messages
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		result.Price, result.Deposit, result.Floor, result.Electricity, result.Water, result.ParkingFee, result.PetsAllowed, result.PhoneNumber, result.AdditionalNotes,
+			price, price_vnd, deposit, floor, electricity, water, parking_fee, pets_allowed, phone_number, additional_notes, raw_fields, missing_fields, sample_messages
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		result.Price, priceVND, result.Deposit, result.Floor, result.Electricity, result.Water, result.ParkingFee, result.PetsAllowed, result.PhoneNumber, result.AdditionalNotes,
 		string(rawFieldsBytes), string(missingFieldsBytes), string(sampleMessagesBytes),
 	)
 	if err != nil {
@@ -137,7 +194,7 @@ func ListRentals() (records []RentalRecord, err error) {
 	log := logger.With("operation", "database.list_rentals")
 	defer func() { logger.LogOperationResult(log, started, failureStage, err) }()
 
-	rows, err := DB.QueryContext(context.Background(), "SELECT id, datetime(created_at, 'localtime'), price, deposit, floor, electricity, water, parking_fee, pets_allowed, phone_number, additional_notes, raw_fields, missing_fields, sample_messages FROM rentals ORDER BY id DESC")
+	rows, err := DB.QueryContext(context.Background(), "SELECT id, datetime(created_at, 'localtime'), price, price_vnd, deposit, floor, electricity, water, parking_fee, pets_allowed, phone_number, additional_notes, raw_fields, missing_fields, sample_messages FROM rentals ORDER BY id DESC")
 	if err != nil {
 		return nil, err
 	}
@@ -146,10 +203,11 @@ func ListRentals() (records []RentalRecord, err error) {
 	for rows.Next() {
 		var rec RentalRecord
 		var res gemini.RentalExtractionResult
+		var priceVND sql.NullInt64
 		var rawFieldsStr, missingFieldsStr, sampleMessagesStr string
 		failureStage = "scan_record"
 		err = rows.Scan(
-			&rec.ID, &rec.CreatedAt, &res.Price, &res.Deposit, &res.Floor, &res.Electricity, &res.Water, &res.ParkingFee, &res.PetsAllowed, &res.PhoneNumber, &res.AdditionalNotes,
+			&rec.ID, &rec.CreatedAt, &res.Price, &priceVND, &res.Deposit, &res.Floor, &res.Electricity, &res.Water, &res.ParkingFee, &res.PetsAllowed, &res.PhoneNumber, &res.AdditionalNotes,
 			&rawFieldsStr, &missingFieldsStr, &sampleMessagesStr,
 		)
 		if err != nil {
@@ -160,6 +218,9 @@ func ListRentals() (records []RentalRecord, err error) {
 		_ = json.Unmarshal([]byte(missingFieldsStr), &res.MissingFields)
 		_ = json.Unmarshal([]byte(sampleMessagesStr), &res.SampleMessages)
 
+		if priceVND.Valid {
+			rec.PriceVND = &priceVND.Int64
+		}
 		rec.Result = &res
 		records = append(records, rec)
 	}

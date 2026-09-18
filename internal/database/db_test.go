@@ -3,6 +3,7 @@ package database
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -73,6 +74,8 @@ func TestDBOperations(t *testing.T) {
 	assert.Equal(t, "5 triệu/tháng", records[0].Result.RawFields["price"])
 	assert.Equal(t, "0911223344", records[0].Result.PhoneNumber)
 	assert.Contains(t, records[0].Result.MissingFields, "parking_fee")
+	require.NotNil(t, records[0].PriceVND)
+	assert.Equal(t, int64(5_000_000), *records[0].PriceVND)
 
 	err = DeleteRental(id)
 	require.NoError(t, err)
@@ -80,6 +83,81 @@ func TestDBOperations(t *testing.T) {
 	records, err = ListRentals()
 	require.NoError(t, err)
 	assert.Len(t, records, 0)
+}
+
+//nolint:paralleltest // Shares process-wide DB state via mockDBPath with other tests in this package.
+func TestSaveRental_UnparsablePriceLeavesPriceVNDNil(t *testing.T) {
+	_ = mockDBPath(t)
+	require.NoError(t, InitDB())
+
+	defer func() { _ = DB.Close() }()
+
+	id, err := SaveRental(&gemini.RentalExtractionResult{Price: "thoả thuận"})
+	require.NoError(t, err)
+
+	records, err := ListRentals()
+	require.NoError(t, err)
+	require.Len(t, records, 1)
+	assert.Equal(t, id, records[0].ID)
+	assert.Nil(t, records[0].PriceVND)
+}
+
+//nolint:paralleltest // Shares process-wide DB state via mockDBPath with other tests in this package.
+func TestInitDB_MigratesLegacySchemaMissingPriceVND(t *testing.T) {
+	mockHome := mockDBPath(t)
+
+	dbPath := filepath.Join(mockHome, ".config", "soi-tro", "rentals.db")
+	require.NoError(t, os.MkdirAll(filepath.Dir(dbPath), 0o700))
+
+	legacyDB, err := sql.Open("sqlite", dbPath)
+	require.NoError(t, err)
+	_, err = legacyDB.ExecContext(context.Background(), `
+	CREATE TABLE rentals (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		price TEXT,
+		deposit TEXT,
+		floor TEXT,
+		electricity TEXT,
+		water TEXT,
+		parking_fee TEXT,
+		pets_allowed TEXT,
+		phone_number TEXT,
+		additional_notes TEXT,
+		raw_fields TEXT,
+		missing_fields TEXT,
+		sample_messages TEXT
+	);`)
+	require.NoError(t, err)
+	_, err = legacyDB.ExecContext(context.Background(), `
+	INSERT INTO rentals (
+		price, deposit, floor, electricity, water, parking_fee, pets_allowed, phone_number, additional_notes, raw_fields, missing_fields, sample_messages
+	) VALUES ('4.5tr', '', '', '', '', '', '', '', '', '{}', '[]', '[]')`)
+	require.NoError(t, err)
+	require.NoError(t, legacyDB.Close())
+
+	require.NoError(t, InitDB())
+
+	defer func() { _ = DB.Close() }()
+
+	records, err := ListRentals()
+	require.NoError(t, err)
+	require.Len(t, records, 1)
+	assert.Nil(t, records[0].PriceVND, "legacy row has no price_vnd until re-saved")
+
+	id, err := SaveRental(&gemini.RentalExtractionResult{Price: "4.5tr"})
+	require.NoError(t, err)
+
+	records, err = ListRentals()
+	require.NoError(t, err)
+	require.Len(t, records, 2)
+
+	for _, rec := range records {
+		if rec.ID == id {
+			require.NotNil(t, rec.PriceVND)
+			assert.Equal(t, int64(4_500_000), *rec.PriceVND)
+		}
+	}
 }
 
 func TestInitDB_HomeDirError(t *testing.T) {
