@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"slices"
 	"strconv"
 	"strings"
 
@@ -94,7 +93,7 @@ func listFields() error {
 	table.SetRowLine(true)
 	table.SetColWidth(25)
 
-	standardKeys := slices.Concat(standardFieldKeys, []string{keyAdditionalNotes, keyMissingFields, keySampleMessages})
+	standardKeys := schemaListKeys
 
 	printRow := func(k string, prop *genai.Schema) {
 		req := "Không"

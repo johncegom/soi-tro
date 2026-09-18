@@ -22,6 +22,9 @@ const (
 // nonDisplayKeys are schema properties shown outside the field table.
 var nonDisplayKeys = []string{keyMissingFields, keySampleMessages, keyAdditionalNotes, keyPhoneNumber}
 
+// schemaListKeys is the display order used by the schema manager, which lists every property.
+var schemaListKeys = slices.Concat(standardFieldKeys, []string{keyAdditionalNotes, keyMissingFields, keySampleMessages})
+
 // orderedKeys returns the property keys with the standard keys first (in the given order),
 // then the remaining keys sorted, omitting skip. Map iteration is random, so sorting keeps
 // custom-field rows stable across runs.
