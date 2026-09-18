@@ -93,8 +93,7 @@ func listFields() error {
 	table.SetRowLine(true)
 	table.SetColWidth(25)
 
-	standardKeys := []string{"price", "deposit", "floor", "parking_fee", "pets_allowed", "electricity", "water", "additional_notes", "missing_fields", "sample_messages"}
-	seen := make(map[string]bool)
+	standardKeys := schemaListKeys
 
 	printRow := func(k string, prop *genai.Schema) {
 		req := "Không"
@@ -117,17 +116,8 @@ func listFields() error {
 		table.Append([]string{k, title, req, string(prop.Type), prop.Description})
 	}
 
-	for _, k := range standardKeys {
-		if prop, ok := schema.Properties[k]; ok {
-			printRow(k, prop)
-			seen[k] = true
-		}
-	}
-
-	for k, prop := range schema.Properties {
-		if !seen[k] {
-			printRow(k, prop)
-		}
+	for _, k := range orderedKeys(schema.Properties, standardKeys) {
+		printRow(k, schema.Properties[k])
 	}
 
 	table.Render()

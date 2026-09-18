@@ -3,10 +3,12 @@ package logger
 import (
 	"bytes"
 	"context"
+	"errors"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -417,4 +419,40 @@ func TestInit_WithWhitespaceLevel(t *testing.T) {
 	err := Init(cfg)
 	assert.Error(t, err)
 	resetLogger()
+}
+
+func TestLogOperationResult(t *testing.T) {
+	t.Parallel()
+
+	t.Run("success logs info without an error", func(t *testing.T) {
+		t.Parallel()
+
+		var buf bytes.Buffer
+
+		log := slog.New(slog.NewTextHandler(&buf, nil))
+
+		LogOperationResult(log, time.Now(), "ignored_stage", nil)
+
+		out := buf.String()
+		assert.Contains(t, out, "level=INFO")
+		assert.Contains(t, out, "operation completed")
+		assert.Contains(t, out, "duration_ms=")
+		assert.NotContains(t, out, "ignored_stage")
+	})
+
+	t.Run("failure logs the stage, not the raw error", func(t *testing.T) {
+		t.Parallel()
+
+		var buf bytes.Buffer
+
+		log := slog.New(slog.NewTextHandler(&buf, nil))
+
+		LogOperationResult(log, time.Now(), "save_record", errors.New("secret sk-123"))
+
+		out := buf.String()
+		assert.Contains(t, out, "level=ERROR")
+		assert.Contains(t, out, "operation failed")
+		assert.Contains(t, out, "error=save_record")
+		assert.NotContains(t, out, "secret")
+	})
 }

@@ -110,3 +110,26 @@ cập` or `Chưa đề cập`), ignoring the model's own list. Regression covera
 `TestExtractRentalInfo_DerivesMissingFieldsFromValues` (the reported
 case) and `TestDeriveMissingFields` (edge cases), both written test-first. Not covered: generated
 `sample_messages` can still ask about fields the model considered missing.
+
+## BUG-005: Custom schema fields render in nondeterministic order
+
+**Symptom:** Fields added through the schema manager (for example
+`air_conditioner`) can appear in a different row order on every run in the
+analysis table, the comparison table, and the schema field listing.
+
+**Root cause:** After the standard fields, `RenderResults`, `RenderComparisonTable`
+and `listFields` iterate `schema.Properties`, a Go map, whose iteration order is
+randomized. The standard-field order and skip list are also copy-pasted in these
+call sites. 
+
+**Reachability:** Any user with two or more custom schema fields reaches it on
+every analysis, comparison, or schema listing.
+
+**Options:** Extract one pure ordered-field helper (standard fields first, then
+remaining keys sorted) and use it at all three sites; see
+`docs/tasks/016-ui-field-ordering-testability.md`.
+
+**Status:** fixed in task 016: `orderedKeys` (`internal/ui/fields.go`) puts standard
+fields first and sorts the rest; `RenderResults`, `RenderComparisonTable` and
+`listFields` use it. Regression coverage: `TestOrderedKeys_StandardFirstThenSortedCustom`
+(50 repeated calls with five custom keys), written test-first.
