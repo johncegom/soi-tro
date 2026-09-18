@@ -34,7 +34,12 @@ iteration-time error rather than a query or scan error.
 **Options:** Check `rows.Err()` after the loop and return the error; add a focused
 test using an injectable query boundary or a driver-level failure fixture.
 
-**Status:** pending decision
+**Status:** fixed in `internal/database/db.go` (`ListRentals` now checks
+`rows.Err()` after iteration and returns it as `iterate_records`). No dedicated
+regression test was added: reproducing a real iteration-time SQLite error
+requires a driver-level failure fixture disproportionate to this one-line
+correctness fix; existing `TestDBOperations` and `TestListRentals_DBError`
+continue to cover the success and query-error paths.
 
 ## BUG-002: Valid Gemini authorization keys can be rejected during setup
 

@@ -137,7 +137,6 @@ func ListRentals() (records []RentalRecord, err error) {
 	log := logger.With("operation", "database.list_rentals")
 	defer func() { logger.LogOperationResult(log, started, failureStage, err) }()
 
-	//nolint:rowserrcheck // BUG-001 tracks the pre-existing missing post-iteration rows.Err check.
 	rows, err := DB.QueryContext(context.Background(), "SELECT id, datetime(created_at, 'localtime'), price, deposit, floor, electricity, water, parking_fee, pets_allowed, phone_number, additional_notes, raw_fields, missing_fields, sample_messages FROM rentals ORDER BY id DESC")
 	if err != nil {
 		return nil, err
@@ -163,6 +162,11 @@ func ListRentals() (records []RentalRecord, err error) {
 
 		rec.Result = &res
 		records = append(records, rec)
+	}
+
+	failureStage = "iterate_records"
+	if err = rows.Err(); err != nil {
+		return nil, err
 	}
 
 	return records, nil
