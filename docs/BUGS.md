@@ -104,4 +104,9 @@ fields whose extracted value is empty or `Không đề cập` (draft agreed, not
 applied); note the generated `sample_messages` may still ask about fields the
 model considered missing.
 
-**Status:** pending decision
+**Status:** fixed: `ExtractRentalInfo` now derives `MissingFields` via
+`deriveMissingFields` (required fields whose value is absent, `N/A`, `Không đề
+cập` or `Chưa đề cập`), ignoring the model's own list. Regression coverage:
+`TestExtractRentalInfo_DerivesMissingFieldsFromValues` (the reported
+case) and `TestDeriveMissingFields` (edge cases), both written test-first. Not covered: generated
+`sample_messages` can still ask about fields the model considered missing.
