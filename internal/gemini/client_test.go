@@ -664,3 +664,56 @@ func TestWrapListing_StripsClosingTag(t *testing.T) {
 	assert.Equal(t, 1, strings.Count(got, "</tin_dang>"))
 	assert.True(t, strings.HasSuffix(got, "</tin_dang>"))
 }
+
+//nolint:paralleltest // This test replaces process-wide home-directory state.
+func TestExtractRentalInfo_DerivesMissingFieldsFromValues(t *testing.T) {
+	mockHome := mockUserHomeDir(t)
+	configDir := filepath.Join(mockHome, ".config", "soi-tro")
+	require.NoError(t, os.MkdirAll(configDir, 0o700))
+
+	baseJSON := `{
+		"type": "OBJECT",
+		"properties": {
+			"elevator": {"type": "STRING"},
+			"deposit": {"type": "STRING"},
+			"missing_fields": {"type": "ARRAY", "items": {"type": "STRING"}}
+		},
+		"x_required_fields": ["elevator", "deposit"]
+	}`
+	signedBytes, err := analyzer.SignSchema([]byte(baseJSON))
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(configDir, "schema.json"), signedBytes, 0o600))
+
+	// The model claims "elevator" is missing although it extracted "Không", and omits "deposit".
+	apiResponse := `{"candidates":[{"content":{"parts":[{"text":"{\"elevator\":\"Không\",\"deposit\":\"Không đề cập\",\"missing_fields\":[\"elevator\"],\"sample_messages\":[]}"}]}}]}`
+
+	c := newMockClient(t, roundTripFunc(func(*http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       io.NopCloser(strings.NewReader(apiResponse)),
+			Header:     make(http.Header),
+		}, nil
+	}))
+
+	res, err := c.ExtractRentalInfo(context.Background(), "ko thang máy", nil, "", []string{"elevator", "deposit"})
+
+	require.NoError(t, err)
+	assert.Equal(t, []string{"deposit"}, res.MissingFields)
+}
+
+func TestDeriveMissingFields(t *testing.T) {
+	t.Parallel()
+
+	values := map[string]string{
+		"price":    "2,900,000 VND",
+		"elevator": "Không",
+		"deposit":  " Không đề cập ",
+		"water":    "N/A",
+		"phone":    "Chưa đề cập",
+	}
+
+	got := deriveMissingFields(values, []string{"price", "elevator", "deposit", "water", "phone", "floor"})
+
+	assert.Equal(t, []string{"deposit", "water", "phone", "floor"}, got)
+	assert.Equal(t, []string{}, deriveMissingFields(values, nil))
+}

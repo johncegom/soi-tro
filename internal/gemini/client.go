@@ -196,7 +196,25 @@ Tin nhắn mẫu (trong 'sample_messages', chính xác 2 tin):
 		}
 	}
 
+	// Derive missing_fields from the extracted values instead of trusting the model's own list.
+	extracted.MissingFields = deriveMissingFields(extracted.RawFields, requiredFields)
+
 	return &extracted, nil
+}
+
+// deriveMissingFields returns the required fields whose extracted value is absent or a
+// "not mentioned" placeholder, in the order of required.
+func deriveMissingFields(values map[string]string, required []string) []string {
+	missing := []string{}
+
+	for _, k := range required {
+		switch strings.ToLower(strings.TrimSpace(values[k])) {
+		case "", "n/a", "không đề cập", "chưa đề cập":
+			missing = append(missing, k)
+		}
+	}
+
+	return missing
 }
 
 // LoadSchema loads the OpenAPI 3.0 schema from a JSON file.
