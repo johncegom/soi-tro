@@ -117,3 +117,44 @@ remains focused on scoped work. The inbox requires occasional status updates;
 avoid duplicating evolving task details there.
 
 **Status:** Accepted
+
+## DECISION-006: Remove dead logging-rotation config and unused error package instead of finishing them
+
+**Context (2026-07-22):** `internal/logger` carried `MaxSizeMB`/`MaxBackups`/`MaxAgeDays`
+config with no size-check or rotation library wired behind it, and `internal/errors`
+had zero callers. `feature-plan.md` and `logging-observability-plan.md` claimed both
+were done.
+
+**Decision:** Delete the unimplemented rotation config and the unused `internal/errors`
+package rather than half-implement them, and correct the plan documents that had
+claimed them as done.
+
+**Alternatives considered:** Wiring `lumberjack` to finish rotation would have kept
+the feature but wasn't in scope for the task that surfaced the drift.
+
+**Consequences:** No dead config remains implying capabilities the code doesn't have.
+Log rotation and a dedicated error package can be reintroduced later as scoped tasks
+if needed.
+
+## DECISION-007: Reuse existing skill templates for CI instead of writing workflows from scratch
+
+**Context (2026-07-22):** Feature-plan Task 7 required a GitHub Actions quality and
+security pipeline (test, lint, security scanning, dependency updates).
+
+**Decision:** Build the pipeline from the repository's own `.claude/skills/golang-continuous-integration`
+and `golang-lint` asset templates (`test.yml`, `lint.yml`, `security.yml`,
+`.golangci.yml`, `.github/dependabot.yml`), scope `golangci-lint` with
+`only-new-issues: true` (verified via `--new-from-rev=origin/main` against the
+~670 pre-existing findings before relying on it), and enable branch protection on
+`main` only after confirming the actual job names.
+
+**Alternatives considered:** Writing workflows from scratch would duplicate what the
+skill templates already provide. Mass-fixing the pre-existing lint findings before
+shipping CI would have blocked the pipeline on unrelated cleanup.
+
+**Consequences:** The pipeline caught real issues on its first run — `go.mod` drift,
+an invalid `gosec` action tag, a golangci-lint v2 schema break, and three reachable
+CVEs in transitive deps pulled in via the Gemini SDK — all fixed before merge. The
+~670 pre-existing lint findings in `internal/ui`/`scripts` remain unaddressed and
+need a dedicated cleanup task. Structured logging still isn't wired into several
+packages (see follow-up task).
