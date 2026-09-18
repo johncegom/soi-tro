@@ -15,22 +15,15 @@ import (
 )
 
 func mockDBPath(t *testing.T) string {
+	t.Helper()
 	tmpDir := t.TempDir()
-	origHome := os.Getenv("HOME")
-	origUserProfile := os.Getenv("USERPROFILE")
-	origHomeDrive := os.Getenv("HOMEDRIVE")
-	origHomePath := os.Getenv("HOMEPATH")
 
-	os.Setenv("HOME", tmpDir)
-	os.Setenv("USERPROFILE", tmpDir)
-	os.Setenv("HOMEDRIVE", "")
-	os.Setenv("HOMEPATH", "")
+	t.Setenv("HOME", tmpDir)
+	t.Setenv("USERPROFILE", tmpDir)
+	t.Setenv("HOMEDRIVE", "")
+	t.Setenv("HOMEPATH", "")
 
 	t.Cleanup(func() {
-		os.Setenv("HOME", origHome)
-		os.Setenv("USERPROFILE", origUserProfile)
-		os.Setenv("HOMEDRIVE", origHomeDrive)
-		os.Setenv("HOMEPATH", origHomePath)
 		if DB != nil {
 			_ = DB.Close()
 			DB = nil
@@ -45,7 +38,7 @@ func TestDBOperations(t *testing.T) {
 
 	err := InitDB()
 	require.NoError(t, err)
-	defer DB.Close()
+	defer func() { _ = DB.Close() }()
 
 	rental := &gemini.RentalExtractionResult{
 		Price:           "5 triệu/tháng",
@@ -64,7 +57,7 @@ func TestDBOperations(t *testing.T) {
 
 	id, err := SaveRental(rental)
 	require.NoError(t, err)
-	assert.True(t, id > 0)
+	assert.Positive(t, id)
 
 	records, err := ListRentals()
 	require.NoError(t, err)
@@ -82,7 +75,7 @@ func TestDBOperations(t *testing.T) {
 
 	records, err = ListRentals()
 	require.NoError(t, err)
-	assert.Len(t, records, 0)
+	assert.Empty(t, records)
 }
 
 //nolint:paralleltest // Shares process-wide DB state via mockDBPath with other tests in this package.
@@ -161,22 +154,10 @@ func TestInitDB_MigratesLegacySchemaMissingPriceVND(t *testing.T) {
 }
 
 func TestInitDB_HomeDirError(t *testing.T) {
-	origHome := os.Getenv("HOME")
-	origUserProfile := os.Getenv("USERPROFILE")
-	origHomeDrive := os.Getenv("HOMEDRIVE")
-	origHomePath := os.Getenv("HOMEPATH")
-
-	os.Setenv("HOME", "")
-	os.Setenv("USERPROFILE", "")
-	os.Setenv("HOMEDRIVE", "")
-	os.Setenv("HOMEPATH", "")
-
-	t.Cleanup(func() {
-		os.Setenv("HOME", origHome)
-		os.Setenv("USERPROFILE", origUserProfile)
-		os.Setenv("HOMEDRIVE", origHomeDrive)
-		os.Setenv("HOMEPATH", origHomePath)
-	})
+	t.Setenv("HOME", "")
+	t.Setenv("USERPROFILE", "")
+	t.Setenv("HOMEDRIVE", "")
+	t.Setenv("HOMEPATH", "")
 
 	err := InitDB()
 	assert.Error(t, err)
@@ -200,9 +181,9 @@ func TestSaveRental_DBError(t *testing.T) {
 	_ = mockDBPath(t)
 	err := InitDB()
 	require.NoError(t, err)
-	defer DB.Close()
+	defer func() { _ = DB.Close() }()
 
-	_, err = DB.Exec("DROP TABLE rentals")
+	_, err = DB.ExecContext(context.Background(), "DROP TABLE rentals")
 	require.NoError(t, err)
 
 	rental := &gemini.RentalExtractionResult{}
@@ -215,9 +196,9 @@ func TestListRentals_DBError(t *testing.T) {
 	_ = mockDBPath(t)
 	err := InitDB()
 	require.NoError(t, err)
-	defer DB.Close()
+	defer func() { _ = DB.Close() }()
 
-	_, err = DB.Exec("DROP TABLE rentals")
+	_, err = DB.ExecContext(context.Background(), "DROP TABLE rentals")
 	require.NoError(t, err)
 
 	_, err = ListRentals()

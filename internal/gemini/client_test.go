@@ -20,24 +20,14 @@ import (
 
 // mockUserHomeDir giả lập thư mục Home của người dùng sang thư mục tạm thời trong thời gian chạy test
 func mockUserHomeDir(t *testing.T) string {
+	t.Helper()
+	t.Helper()
 	tmpDir := t.TempDir()
 
-	origHome := os.Getenv("HOME")
-	origUserProfile := os.Getenv("USERPROFILE")
-	origHomeDrive := os.Getenv("HOMEDRIVE")
-	origHomePath := os.Getenv("HOMEPATH")
-
-	os.Setenv("HOME", tmpDir)
-	os.Setenv("USERPROFILE", tmpDir)
-	os.Setenv("HOMEDRIVE", "")
-	os.Setenv("HOMEPATH", "")
-
-	t.Cleanup(func() {
-		os.Setenv("HOME", origHome)
-		os.Setenv("USERPROFILE", origUserProfile)
-		os.Setenv("HOMEDRIVE", origHomeDrive)
-		os.Setenv("HOMEPATH", origHomePath)
-	})
+	t.Setenv("HOME", tmpDir)
+	t.Setenv("USERPROFILE", tmpDir)
+	t.Setenv("HOMEDRIVE", "")
+	t.Setenv("HOMEPATH", "")
 
 	return tmpDir
 }
@@ -105,11 +95,7 @@ func TestSchemaAndExportConfig(t *testing.T) {
 }
 
 func TestNewClient_NoAPIKey(t *testing.T) {
-	origKey := os.Getenv("GEMINI_API_KEY")
-	os.Setenv("GEMINI_API_KEY", "")
-	t.Cleanup(func() {
-		os.Setenv("GEMINI_API_KEY", origKey)
-	})
+	t.Setenv("GEMINI_API_KEY", "")
 
 	c, err := NewClient(context.Background())
 	assert.Error(t, err)
@@ -118,11 +104,7 @@ func TestNewClient_NoAPIKey(t *testing.T) {
 }
 
 func TestNewClient_Success(t *testing.T) {
-	origKey := os.Getenv("GEMINI_API_KEY")
-	os.Setenv("GEMINI_API_KEY", "some-mock-key")
-	t.Cleanup(func() {
-		os.Setenv("GEMINI_API_KEY", origKey)
-	})
+	t.Setenv("GEMINI_API_KEY", "some-mock-key")
 
 	c, err := NewClient(context.Background())
 	assert.NoError(t, err)
@@ -130,11 +112,7 @@ func TestNewClient_Success(t *testing.T) {
 }
 
 func TestNewClient_WithValidAPIKey(t *testing.T) {
-	origKey := os.Getenv("GEMINI_API_KEY")
-	os.Setenv("GEMINI_API_KEY", "mock-test-api-key-12345")
-	t.Cleanup(func() {
-		os.Setenv("GEMINI_API_KEY", origKey)
-	})
+	t.Setenv("GEMINI_API_KEY", "mock-test-api-key-12345")
 
 	c, err := NewClient(context.Background())
 	assert.NoError(t, err)
@@ -143,11 +121,7 @@ func TestNewClient_WithValidAPIKey(t *testing.T) {
 }
 
 func TestNewClient_WithCancelledContext(t *testing.T) {
-	origKey := os.Getenv("GEMINI_API_KEY")
-	os.Setenv("GEMINI_API_KEY", "some-mock-key")
-	t.Cleanup(func() {
-		os.Setenv("GEMINI_API_KEY", origKey)
-	})
+	t.Setenv("GEMINI_API_KEY", "some-mock-key")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // Cancel immediately
@@ -282,22 +256,10 @@ func TestExtractRentalInfo_SchemaLoadFail(t *testing.T) {
 }
 
 func TestExtractRentalInfo_GetSchemaPathFail(t *testing.T) {
-	origHome := os.Getenv("HOME")
-	origUserProfile := os.Getenv("USERPROFILE")
-	origHomeDrive := os.Getenv("HOMEDRIVE")
-	origHomePath := os.Getenv("HOMEPATH")
-
-	os.Setenv("HOME", "")
-	os.Setenv("USERPROFILE", "")
-	os.Setenv("HOMEDRIVE", "")
-	os.Setenv("HOMEPATH", "")
-
-	t.Cleanup(func() {
-		os.Setenv("HOME", origHome)
-		os.Setenv("USERPROFILE", origUserProfile)
-		os.Setenv("HOMEDRIVE", origHomeDrive)
-		os.Setenv("HOMEPATH", origHomePath)
-	})
+	t.Setenv("HOME", "")
+	t.Setenv("USERPROFILE", "")
+	t.Setenv("HOMEDRIVE", "")
+	t.Setenv("HOMEPATH", "")
 
 	c := &Client{}
 	_, err := c.ExtractRentalInfo(context.Background(), "some listing", nil, "", nil)
@@ -325,17 +287,19 @@ func TestExtractRentalInfo_WithCancelledContext(t *testing.T) {
 	assert.Error(t, err)
 }
 
-type roundTripFunc func(req *http.Request) (*http.Response, error)
+type roundTripFunc func(*http.Request) (*http.Response, error)
 
 func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 	return f(req)
 }
 
 func newMockClient(t *testing.T, handler roundTripFunc) *Client {
+	t.Helper()
+	t.Helper()
 	mockHTTPClient := &http.Client{
 		Transport: handler,
 	}
-	config := &genai.ClientConfig{
+	config := &genai.ClientConfig{ //nolint:gosec // G101: fake key for the mock transport.
 		APIKey:     "mock-test-api-key-123",
 		HTTPClient: mockHTTPClient,
 	}
@@ -443,7 +407,7 @@ func TestExtractRentalInfo_SuccessImage(t *testing.T) {
 
 	apiResponse := `{"candidates": [{"content": {"parts": [{"text": "{\"price\": \"4,000,000 VND\", \"custom_number_field\": 123}"}]}}]}`
 
-	c := newMockClient(t, roundTripFunc(func(req *http.Request) (*http.Response, error) {
+	c := newMockClient(t, roundTripFunc(func(_ *http.Request) (*http.Response, error) {
 		return &http.Response{
 			StatusCode: http.StatusOK,
 			Body:       io.NopCloser(strings.NewReader(apiResponse)),
@@ -470,7 +434,7 @@ func TestExtractRentalInfo_APIFail(t *testing.T) {
 	err = os.WriteFile(schemaPath, signedBytes, 0o600)
 	require.NoError(t, err)
 
-	c := newMockClient(t, roundTripFunc(func(req *http.Request) (*http.Response, error) {
+	c := newMockClient(t, roundTripFunc(func(_ *http.Request) (*http.Response, error) {
 		return &http.Response{
 			StatusCode: http.StatusInternalServerError,
 			Body:       io.NopCloser(strings.NewReader("internal server error")),
@@ -497,7 +461,7 @@ func TestExtractRentalInfo_NoCandidates(t *testing.T) {
 
 	apiResponse := `{"candidates": []}`
 
-	c := newMockClient(t, roundTripFunc(func(req *http.Request) (*http.Response, error) {
+	c := newMockClient(t, roundTripFunc(func(_ *http.Request) (*http.Response, error) {
 		return &http.Response{
 			StatusCode: http.StatusOK,
 			Body:       io.NopCloser(strings.NewReader(apiResponse)),
@@ -524,7 +488,7 @@ func TestExtractRentalInfo_MalformedJSON(t *testing.T) {
 
 	apiResponse := `{"candidates": [{"content": {"parts": [{"text": "invalid-json-here"}]}}]}`
 
-	c := newMockClient(t, roundTripFunc(func(req *http.Request) (*http.Response, error) {
+	c := newMockClient(t, roundTripFunc(func(_ *http.Request) (*http.Response, error) {
 		return &http.Response{
 			StatusCode: http.StatusOK,
 			Body:       io.NopCloser(strings.NewReader(apiResponse)),
@@ -620,7 +584,7 @@ func TestExtractRentalInfo_NoParts(t *testing.T) {
 
 	apiResponse := `{"candidates": [{"content": {"parts": []}}]}`
 
-	c := newMockClient(t, roundTripFunc(func(req *http.Request) (*http.Response, error) {
+	c := newMockClient(t, roundTripFunc(func(_ *http.Request) (*http.Response, error) {
 		return &http.Response{
 			StatusCode: http.StatusOK,
 			Body:       io.NopCloser(strings.NewReader(apiResponse)),

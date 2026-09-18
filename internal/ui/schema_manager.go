@@ -6,14 +6,15 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
+	"soi-tro/internal/analyzer"
+	"soi-tro/internal/gemini"
 	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/huh"
 	"github.com/olekukonko/tablewriter"
 	"google.golang.org/genai"
-	"soi-tro/internal/analyzer"
-	"soi-tro/internal/gemini"
 )
 
 // ManageSchemaLoop displays the schema management UI menu and processes selections.
@@ -29,7 +30,7 @@ func ManageSchemaLoop() error {
 						huh.NewOption("2. Thêm trường thông tin mới", "add"),
 						huh.NewOption("3. Xóa trường thông tin", "delete"),
 						huh.NewOption("4. Bật/Tắt trạng thái bắt buộc (Required)", "toggle"),
-						huh.NewOption("5. Quay lại menu chính", "back"),
+						huh.NewOption("5. Quay lại menu chính", backChoice),
 					).
 					Value(&manageChoice),
 			),
@@ -39,10 +40,10 @@ func ManageSchemaLoop() error {
 			return err
 		}
 		if backPressed {
-			manageChoice = "back"
+			manageChoice = backChoice
 		}
 
-		if manageChoice == "back" {
+		if manageChoice == backChoice {
 			break
 		}
 
@@ -97,13 +98,7 @@ func listFields() error {
 
 	printRow := func(k string, prop *genai.Schema) {
 		req := "Không"
-		isRequired := false
-		for _, r := range config.RequiredFields {
-			if r == k {
-				isRequired = true
-				break
-			}
-		}
+		isRequired := slices.Contains(config.RequiredFields, k)
 		if isRequired {
 			req = "Có"
 		}
@@ -124,7 +119,7 @@ func listFields() error {
 
 	fmt.Print("\nNhấn Enter để quay lại menu quản lý...")
 	var dummy string
-	fmt.Scanln(&dummy)
+	_, _ = fmt.Scanln(&dummy)
 	return nil
 }
 
@@ -317,13 +312,7 @@ func toggleFieldRequired() error {
 			continue
 		}
 
-		isRequired := false
-		for _, r := range config.RequiredFields {
-			if r == k {
-				isRequired = true
-				break
-			}
-		}
+		isRequired := slices.Contains(config.RequiredFields, k)
 
 		title := prop.Title
 		if title == "" {
@@ -494,7 +483,7 @@ func ConfigureExport() error {
 	}
 
 	// Attempt to pre-create the directory to surface permission errors immediately.
-	if err := os.MkdirAll(absDir, 0o755); err != nil {
+	if err := os.MkdirAll(absDir, 0o750); err != nil {
 		return fmt.Errorf("không thể tạo thư mục xuất: %w", err)
 	}
 

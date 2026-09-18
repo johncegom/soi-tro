@@ -1,3 +1,4 @@
+// Package exporter appends analyzed rentals to rolling text files.
 package exporter
 
 import (
@@ -55,7 +56,7 @@ func WriteResult(cfg Config, result *gemini.RentalExtractionResult, titleMap map
 	cfg.Dir = absDir
 
 	failureStage = "create_directory"
-	if err := os.MkdirAll(cfg.Dir, 0o755); err != nil {
+	if err := os.MkdirAll(cfg.Dir, 0o750); err != nil {
 		return fmt.Errorf("failed to create export directory: %w", err)
 	}
 
@@ -159,11 +160,11 @@ func formatResult(result *gemini.RentalExtractionResult, titleMap map[string]str
 	var b strings.Builder
 
 	b.WriteString(separator)
-	b.WriteString(fmt.Sprintf("KẾT QUẢ PHÂN TÍCH  —  %s\n", time.Now().Format("02/01/2006 15:04:05")))
+	fmt.Fprintf(&b, "KẾT QUẢ PHÂN TÍCH  —  %s\n", time.Now().Format("02/01/2006 15:04:05"))
 	b.WriteString("================================================================================\n\n")
 
 	if result.PhoneNumber != "" && result.PhoneNumber != "Không đề cập" {
-		b.WriteString(fmt.Sprintf("%-26s: %s\n", "Liên hệ chủ nhà", result.PhoneNumber))
+		fmt.Fprintf(&b, "%-26s: %s\n", "Liên hệ chủ nhà", result.PhoneNumber)
 	}
 
 	// Write all extracted structured fields in a consistent, aligned format.
@@ -175,24 +176,24 @@ func formatResult(result *gemini.RentalExtractionResult, titleMap map[string]str
 		if t, ok := titleMap[k]; ok && t != "" {
 			label = t
 		}
-		b.WriteString(fmt.Sprintf("%-26s: %s\n", label, v))
+		fmt.Fprintf(&b, "%-26s: %s\n", label, v)
 	}
 
 	if result.AdditionalNotes != "" && result.AdditionalNotes != "Không đề cập" {
-		b.WriteString(fmt.Sprintf("\nGhi chú thêm:\n  %s\n", result.AdditionalNotes))
+		fmt.Fprintf(&b, "\nGhi chú thêm:\n  %s\n", result.AdditionalNotes)
 	}
 
 	if len(result.MissingFields) > 0 {
 		b.WriteString("\nTrường còn thiếu:\n")
 		for _, m := range result.MissingFields {
-			b.WriteString(fmt.Sprintf("  - %s\n", m))
+			fmt.Fprintf(&b, "  - %s\n", m)
 		}
 	}
 
 	if len(result.SampleMessages) > 0 {
 		b.WriteString("\nTin nhắn mẫu:\n")
 		for _, msg := range result.SampleMessages {
-			b.WriteString(fmt.Sprintf("\n  [%s]\n  %s\n", msg.Style, msg.Content))
+			fmt.Fprintf(&b, "\n  [%s]\n  %s\n", msg.Style, msg.Content)
 		}
 	}
 

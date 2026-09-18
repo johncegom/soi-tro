@@ -26,9 +26,7 @@ linters:
     # style
     - gocritic         # opinionated style: unnecessary conversions, range copies, redundant code
     - revive           # naming conventions, exported types, stuttered package names
-    - wsl_v5           # whitespace and blank line rules for readability
     - whitespace       # trailing whitespace, unnecessary blank lines
-    - godot            # exported-symbol comments must end with a period
     - misspell         # common English misspellings in identifiers and comments
     - dupword          # duplicate words in comments and strings (the the, is is)
     - predeclared      # shadowing Go built-ins (len, cap, error)
@@ -60,7 +58,6 @@ linters:
     - testifylint      # testify best practices
     - thelper          # test helpers missing t.Helper()
     - usetesting       # use t.Setenv/t.TempDir instead of os equivalents in tests
-    - paralleltest     # tests and subtests missing t.Parallel()
     # modernization & meta
     - modernize        # old patterns replaceable with newer Go features
     - exptostd         # replace golang.org/x/exp/ functions with stdlib equivalents
@@ -70,6 +67,9 @@ linters:
     - nolintlint       # enforces proper //nolint directive usage
 
   disable:
+    - wsl_v5           # blank-line rules; 164 hits of pure churn, no bugs caught
+    - godot            # comment periods; cosmetic
+    - paralleltest     # tests mutate process env and a package-level DB; cannot run parallel
     - lll              # line length — handled by gofmt/gofumpt
     - prealloc         # high false-positive rate; enable only after performance profiling
     - wrapcheck        # forces wrapping all external errors — too noisy as a default
@@ -107,12 +107,26 @@ linters:
       - third_party$
       - testutils$
       - examples$
+    rules:
+      # Reading user-named files is the product (rental posts, schema, exports).
+      - linters: [gosec]
+        text: "G304"
+      # Test tables repeat literals and write temp files by design.
+      - path: _test\.go
+        linters: [dupl, goconst, funlen] # table tests
+      - path: _test\.go
+        linters: [gosec]
+        text: "G306|G104" # temp files; cleanup calls
 
   settings:
     dupl:
       threshold: 100  # lower => stricter (tokens)
+    dupword:
+      ignore: [song, SONG, luôn] # Vietnamese reduplication: "song song", "luôn luôn"
     errcheck:
       check-type-assertions: true
+    exhaustive:
+      default-signifies-exhaustive: true
     funlen:
       lines: 120
       statements: 80
@@ -120,14 +134,13 @@ linters:
       min-len: 3
       min-occurrences: 4
     gocyclo:
-      min-complexity: 13 # strict; lower => stricter
+      min-complexity: 20 # main/UI renderers sit at 28-43; those carry nolint
+    testifylint:
+      disable:
+        - require-error # assert vs require in existing tests is style, not a bug
     nolintlint:
       require-explanation: true
       require-specific: true
-    wsl_v5:
-      allow-first-in-block: true
-      allow-whole-block: false
-      branch-max-lines: 2
 
 formatters:
   enable:
