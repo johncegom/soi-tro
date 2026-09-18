@@ -1,3 +1,4 @@
+// Package ui holds the interactive terminal screens and result renderers.
 package ui
 
 import (
@@ -10,8 +11,16 @@ import (
 // standardFieldKeys is the display order of the built-in fields; custom fields follow.
 var standardFieldKeys = []string{"price", "deposit", "floor", "parking_fee", "pets_allowed", "electricity", "water"}
 
+// Schema properties shown outside the field table.
+const (
+	keyAdditionalNotes = "additional_notes"
+	keyMissingFields   = "missing_fields"
+	keySampleMessages  = "sample_messages"
+	keyPhoneNumber     = "phone_number"
+)
+
 // nonDisplayKeys are schema properties shown outside the field table.
-var nonDisplayKeys = []string{"missing_fields", "sample_messages", "additional_notes", "phone_number"}
+var nonDisplayKeys = []string{keyMissingFields, keySampleMessages, keyAdditionalNotes, keyPhoneNumber}
 
 // orderedKeys returns the property keys with the standard keys first (in the given order),
 // then the remaining keys sorted, omitting skip. Map iteration is random, so sorting keeps

@@ -422,8 +422,13 @@ func TestInit_WithWhitespaceLevel(t *testing.T) {
 }
 
 func TestLogOperationResult(t *testing.T) {
+	t.Parallel()
+
 	t.Run("success logs info without an error", func(t *testing.T) {
+		t.Parallel()
+
 		var buf bytes.Buffer
+
 		log := slog.New(slog.NewTextHandler(&buf, nil))
 
 		LogOperationResult(log, time.Now(), "ignored_stage", nil)
@@ -436,7 +441,10 @@ func TestLogOperationResult(t *testing.T) {
 	})
 
 	t.Run("failure logs the stage, not the raw error", func(t *testing.T) {
+		t.Parallel()
+
 		var buf bytes.Buffer
+
 		log := slog.New(slog.NewTextHandler(&buf, nil))
 
 		LogOperationResult(log, time.Now(), "save_record", errors.New("secret sk-123"))

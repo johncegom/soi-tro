@@ -56,6 +56,7 @@ func RenderResults(result *gemini.RentalExtractionResult, config *analyzer.Confi
 			if title == "" {
 				title = k
 			}
+
 			fields = append(fields, displayField{key: k, name: title, value: result.RawFields[k]})
 		}
 	} else {
@@ -188,6 +189,7 @@ func RenderComparisonTable(records []database.RentalRecord) {
 			if title == "" {
 				title = k
 			}
+
 			fields = append(fields, compareField{name: title, key: k})
 		}
 	} else {
