@@ -2,6 +2,8 @@ module soi-tro
 
 go 1.26.3
 
+toolchain go1.26.8
+
 require (
 	github.com/atotto/clipboard v0.1.4
 	github.com/charmbracelet/bubbletea v1.3.6

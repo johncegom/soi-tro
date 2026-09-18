@@ -171,7 +171,7 @@ func DeleteRentalUI() error {
 				Value(&confirmDelete),
 		),
 	)
-	
+
 	backPressed, err = RunFormWithArrows(confirmForm)
 	if err != nil {
 		return err

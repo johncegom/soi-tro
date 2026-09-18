@@ -20,7 +20,7 @@ func DefaultConfig() Config {
 	if err != nil {
 		homeDir = "."
 	}
-	
+
 	return Config{
 		Level:      "info",
 		Format:     "text", // text for development, json for production
@@ -32,23 +32,23 @@ func DefaultConfig() Config {
 // LoadFromEnv loads configuration from environment variables
 func LoadFromEnv() Config {
 	cfg := DefaultConfig()
-	
+
 	if level := os.Getenv("LOG_LEVEL"); level != "" {
 		cfg.Level = strings.ToLower(level)
 	}
-	
+
 	if format := os.Getenv("LOG_FORMAT"); format != "" {
 		cfg.Format = strings.ToLower(format)
 	}
-	
+
 	if path := os.Getenv("LOG_FILE"); path != "" {
 		cfg.OutputPath = path
 	}
-	
+
 	if console := os.Getenv("LOG_CONSOLE"); console != "" {
 		cfg.Console = strings.ToLower(console) == "true"
 	}
-	
+
 	return cfg
 }
 
@@ -60,11 +60,11 @@ func (c Config) IsValid() bool {
 		"warn":  true,
 		"error": true,
 	}
-	
+
 	validFormats := map[string]bool{
 		"json": true,
 		"text": true,
 	}
-	
+
 	return validLevels[c.Level] && validFormats[c.Format] && c.OutputPath != ""
 }

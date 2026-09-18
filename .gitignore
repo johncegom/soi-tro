@@ -12,6 +12,7 @@ soi-tro
 *.test
 *.out
 *.prof
+coverage
 coverage.txt
 
 # Environment and secrets

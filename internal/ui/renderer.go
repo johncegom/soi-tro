@@ -161,7 +161,7 @@ func RenderComparisonTable(records []database.RentalRecord) {
 	fmt.Println("=========================================================================")
 
 	table := tablewriter.NewWriter(os.Stdout)
-	
+
 	headers := []string{"Tiêu chí"}
 	for i, rec := range records {
 		headers = append(headers, fmt.Sprintf("Phòng %d (ID: %d)", i+1, rec.ID))
