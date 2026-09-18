@@ -87,6 +87,33 @@ Record a decision when an informed reviewer could reasonably have chosen a
 different approach and would benefit from knowing why this one was selected.
 Routine or easily reversible choices do not need entries.
 
+## Test-driven development
+
+Every behavior change and bug fix is test-first. Size is not an exemption.
+
+1. **Red.** Write the failing test first and run it. It must fail on an
+   assertion about the missing behavior, not on a compile error, typo, or
+   unrelated failure. Keep the command and the failing line.
+2. **Green.** Write the minimum production code that passes it.
+3. **Refactor.** Clean up with the tests green, then run `go test ./...`.
+
+A bug fix starts by reproducing the bug as a failing test; that test is the
+"regression coverage" named in the `docs/BUGS.md` entry.
+
+Do not write production code before a failing test exists. Do not edit or
+weaken a test to make code pass unless the test's expectation is wrong, and
+say why. Test observable behavior; do not mock the code under test. If work
+turns out to have been written code-first, stash the production change and
+redo it from red rather than backfilling a test.
+
+Record the red run and the green run in the final report or PR body. Missing
+evidence fails Grade.
+
+Exempt, and say which applies: docs-only, comment or formatting changes,
+dependency or config changes with no behavior, and code that only reaches a
+live service (Gemini). For the last, extract the logic into a pure function
+and test that.
+
 ## Build and verification
 
 Use the commands that match the change:
@@ -181,8 +208,8 @@ the final report that Advise did not run. After each call add one row to
 **Grade.** After finishing a task that has a Definition of Done and Test
 Plan, and before reporting it complete, call your tool with the `role=grade`
 model in a fresh context. Give it only the approved rubric, the finished
-diff or output, and the verification results; withhold the reasoning and
-discussion that produced them. It returns pass or fail and names every
+diff or output, and the verification results including the TDD red and
+green evidence; withhold the reasoning and discussion that produced them. It returns pass or fail and names every
 failed criterion. Default on fail: a targeted fix, then a fresh Grade pass;
 rerun the implementation from the approved design only when Grade shows the
 core approach or its assumptions are invalid. No usable row: run the same
