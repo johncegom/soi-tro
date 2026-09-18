@@ -51,33 +51,12 @@ func RenderResults(result *gemini.RentalExtractionResult, config *analyzer.Confi
 	var fields []displayField
 
 	if schema != nil && len(schema.Properties) > 0 {
-		standardOrder := []string{"price", "deposit", "floor", "parking_fee", "pets_allowed", "electricity", "water"}
-		seen := make(map[string]bool)
-
-		for _, k := range standardOrder {
-			if prop, exists := schema.Properties[k]; exists {
-				val := result.RawFields[k]
-				title := prop.Title
-				if title == "" {
-					title = k
-				}
-				fields = append(fields, displayField{key: k, name: title, value: val})
-				seen[k] = true
+		for _, k := range orderedKeys(schema.Properties, standardFieldKeys, nonDisplayKeys...) {
+			title := schema.Properties[k].Title
+			if title == "" {
+				title = k
 			}
-		}
-
-		for k, prop := range schema.Properties {
-			if k == "missing_fields" || k == "sample_messages" || k == "additional_notes" || k == "phone_number" {
-				continue
-			}
-			if !seen[k] {
-				val := result.RawFields[k]
-				title := prop.Title
-				if title == "" {
-					title = k
-				}
-				fields = append(fields, displayField{key: k, name: title, value: val})
-			}
+			fields = append(fields, displayField{key: k, name: title, value: result.RawFields[k]})
 		}
 	} else {
 		fields = []displayField{
@@ -106,21 +85,7 @@ func RenderResults(result *gemini.RentalExtractionResult, config *analyzer.Confi
 		}
 
 		// Calculate compliance status
-		isMissing := false
-		if isRequired {
-			// Check if Gemini identified it as missing
-			for _, m := range result.MissingFields {
-				if strings.EqualFold(m, field.key) {
-					isMissing = true
-					break
-				}
-			}
-			// Double-check if the extracted value is empty, "n/a", or "không đề cập"
-			valLower := strings.ToLower(strings.TrimSpace(field.value))
-			if field.value == "" || valLower == "n/a" || valLower == "không đề cập" || valLower == "chưa đề cập" {
-				isMissing = true
-			}
-		}
+		isMissing := fieldMissing(isRequired, result.MissingFields, field.key, field.value)
 
 		status := "[ OK ]"
 		if isMissing {
@@ -218,31 +183,12 @@ func RenderComparisonTable(records []database.RentalRecord) {
 	var fields []compareField
 
 	if schema != nil && len(schema.Properties) > 0 {
-		standardOrder := []string{"price", "deposit", "floor", "parking_fee", "pets_allowed", "electricity", "water"}
-		seen := make(map[string]bool)
-
-		for _, k := range standardOrder {
-			if prop, exists := schema.Properties[k]; exists {
-				title := prop.Title
-				if title == "" {
-					title = k
-				}
-				fields = append(fields, compareField{name: title, key: k})
-				seen[k] = true
+		for _, k := range orderedKeys(schema.Properties, standardFieldKeys, nonDisplayKeys...) {
+			title := schema.Properties[k].Title
+			if title == "" {
+				title = k
 			}
-		}
-
-		for k, prop := range schema.Properties {
-			if k == "missing_fields" || k == "sample_messages" || k == "additional_notes" || k == "phone_number" {
-				continue
-			}
-			if !seen[k] {
-				title := prop.Title
-				if title == "" {
-					title = k
-				}
-				fields = append(fields, compareField{name: title, key: k})
-			}
+			fields = append(fields, compareField{name: title, key: k})
 		}
 	} else {
 		fields = []compareField{
