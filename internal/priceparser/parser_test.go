@@ -1,6 +1,11 @@
 package priceparser
 
-import "testing"
+import (
+	"encoding/csv"
+	"os"
+	"strconv"
+	"testing"
+)
 
 func TestParseVND(t *testing.T) {
 	tests := []struct {
@@ -54,6 +59,50 @@ func TestParseVND(t *testing.T) {
 				t.Fatalf("ParseVND(%q) = %d; want %d", tt.input, got, tt.want)
 			}
 		})
+	}
+}
+
+// TestParseVND_ManualDataset runs the representative listing strings from
+// docs/price-normalization.md's manual test plan against the parser, so the
+// documented examples stay correct as the grammar evolves.
+func TestParseVND_ManualDataset(t *testing.T) {
+	f, err := os.Open("testdata/manual_price_dataset.csv")
+	if err != nil {
+		t.Fatalf("failed to open manual dataset: %v", err)
+	}
+	defer f.Close()
+
+	r := csv.NewReader(f)
+	rows, err := r.ReadAll()
+	if err != nil {
+		t.Fatalf("failed to read manual dataset: %v", err)
+	}
+
+	for i, row := range rows[1:] {
+		line := i + 2 // header is line 1
+		input, expectedVND, expectedResult := row[0], row[1], row[2]
+
+		got, err := ParseVND(input)
+		switch expectedResult {
+		case "accept":
+			if err != nil {
+				t.Errorf("line %d: ParseVND(%q) returned unexpected error: %v", line, input, err)
+				continue
+			}
+			want, parseErr := strconv.ParseInt(expectedVND, 10, 64)
+			if parseErr != nil {
+				t.Fatalf("line %d: dataset has invalid expected_vnd %q: %v", line, expectedVND, parseErr)
+			}
+			if got != want {
+				t.Errorf("line %d: ParseVND(%q) = %d; want %d", line, input, got, want)
+			}
+		case "reject":
+			if err == nil {
+				t.Errorf("line %d: ParseVND(%q) = %d, nil; want an error", line, input, got)
+			}
+		default:
+			t.Fatalf("line %d: dataset has unknown expected_result %q", line, expectedResult)
+		}
 	}
 }
 

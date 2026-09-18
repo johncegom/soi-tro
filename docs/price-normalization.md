@@ -49,3 +49,13 @@ The parser rejects rather than guesses:
 `price_vnd` was added after the initial schema. `InitDB` adds the column to
 any existing `rentals` table that predates it, leaving already-saved rows
 with `price_vnd = NULL` until they are re-saved.
+
+## Manual test plan
+
+`internal/priceparser/testdata/manual_price_dataset.csv` lists representative
+listing strings with their expected outcome (`accept` with the exact VND
+value, or `reject`). `TestParseVND_ManualDataset` runs this file
+automatically on every test run, so it doubles as a manual reference and a
+regression test: to manually verify a real listing string, run it through
+`ParseVND` (or save a rental with that price and check `price_vnd` in
+history) and compare against the closest row in the dataset.
