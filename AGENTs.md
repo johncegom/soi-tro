@@ -128,60 +128,79 @@ contain history, update this file, and leave old cross-references intact.
 
 ## Execute / Advise / Grade / Dream
 
-Read `docs/execute-advise-grade-dream.md` for the design rationale. Follow
-these instructions during non-trivial tasks.
+Rationale: `docs/execute-advise-grade-dream.md`. Log: `docs/eagd-log.md`.
+Each role below is a genuinely separate call to your sub-agent tool with its
+own `model` field, not a labeled phase in your own session.
 
-**Execute.** Treat the primary session as Execute. When the task runner allows
-the Execute model to be selected, prefer `gpt-5.6-sol` with
-`reasoning_effort: medium`. Do not restart an active session merely to enforce
-this preference.
+Bindings are keyed by the sub-agent tool you actually hold (check your tool
+list; do not guess your vendor). Use the row for `role` + your tool with
+`status=ok`. Never run Advise or Dream on your own model or an unknown one.
 
-**Advise.** When a decision is genuinely ambiguous and a wrong choice would be
-costly to reverse, pause Execute and spawn a separate agent with:
+<!-- eagd-bindings:start -->
+eagd-binding: role=advise tool=Agent model=opus status=ok probed=2026-09-18 reported=claude-opus-5
+eagd-binding: role=grade tool=Agent model=haiku status=ok probed=2026-09-18 reported=claude-haiku-4-5-20251001
+eagd-binding: role=dream tool=Agent model=opus status=ok probed=2026-09-18 reported=claude-opus-5
+eagd-binding: role=advise tool=spawn_agent model=gpt-5.6-sol effort=high retry_model=gpt-6-astra retry_effort=medium status=unverified
+eagd-binding: role=grade tool=spawn_agent model=gpt-5.6-luna effort=high status=unverified
+eagd-binding: role=dream tool=spawn_agent model=gpt-6-astra effort=medium status=unverified
+<!-- eagd-bindings:end -->
 
-- `model: gpt-5.6-sol`
-- `reasoning_effort: high`
-- no inherited conversation context
+**`spawn_agent` harness (GPT models).** These rows were carried over from the
+earlier hand-written setup and have never been probed, so they are
+`status=unverified` and fall under the "no usable row" rules below (Advise
+and Dream skip, Grade falls back). Re-run `/bootstrap-eagd-pattern` from that
+harness: it probes each row, and only then sets `status=ok`. `effort` is the
+`reasoning_effort` to pass; every spawn starts with no inherited
+conversation context. For Advise only: if the advisor explicitly says it
+cannot resolve the decision or reports low confidence, retry once with
+`retry_model` and its `retry_effort`, add a second Advise-calls row for the
+retry, and never substitute another model silently.
 
-Give the advisor only the decision and the minimum evidence needed to answer
-it. Do not send the whole transcript. Wait for its answer before continuing.
-If that advisor explicitly cannot resolve the decision or reports low
-confidence, retry once with `model: gpt-6-astra` and
-`reasoning_effort: medium`. Do not substitute another model silently.
+**Execute.** The primary session. Do not restart it to change its model. On
+a `spawn_agent` harness, when the task runner lets you pick the Execute
+model, prefer `gpt-5.6-sol` with `reasoning_effort: medium`.
 
-**Grade.** After finishing a non-trivial task with a Definition of Done and
-Test Plan, and before reporting it complete, spawn a fresh agent with:
+**Advise.** Fires on observable conditions, never on felt doubt: one call
+before writing a Program design section, and one call before changing DB
+schema or migrations, the Gemini prompt or listing-fence (injection)
+handling, or credential/contact-data handling. Only judgment calls go here:
+answer anything the repo can settle by reading it, and take preferences to
+the user (`AskUserQuestion`) or a stated default. Write your leaning and why
+in one or two lines, then call your tool with the `role=advise` model. The
+prompt contains: the question; your leaning with the case for and against;
+the artifacts the decision turns on, verbatim (not your summary, not the
+transcript); a request to name any context it lacked; and a first
+instruction to begin its reply with `model: <its own id>`. Wait for the
+reply before continuing. If `reported` differs from the row, set the row to
+`status=stale`, add a Binding-changes row, and skip Advise until fixed. No
+usable row or the spawn errors: proceed on your leaning, log Status
+`SKIPPED reason=no-verified-model-binding` (or the actual code), and say in
+the final report that Advise did not run. After each call add one row to
+"Advise calls" in `docs/eagd-log.md`.
 
-- `model: gpt-5.6-luna`
-- `reasoning_effort: high`
-- no inherited conversation context
+**Grade.** After finishing a task that has a Definition of Done and Test
+Plan, and before reporting it complete, call your tool with the `role=grade`
+model in a fresh context. Give it only the approved rubric, the finished
+diff or output, and the verification results; withhold the reasoning and
+discussion that produced them. It returns pass or fail and names every
+failed criterion. Default on fail: a targeted fix, then a fresh Grade pass;
+rerun the implementation from the approved design only when Grade shows the
+core approach or its assumptions are invalid. No usable row: run the same
+fresh, context-free call on your own model and add a row to "Grade
+fallbacks".
 
-Give Grade only the approved rubric, the finished diff or output, and the
-verification results. Withhold the reasoning and discussion that produced
-them. Grade must return pass or fail and name every failed criterion. A failure
-defaults to a targeted fix followed by another fresh Grade pass. Restart the
-implementation from the approved design only when Grade shows that the core
-approach or its assumptions are invalid.
+**Dream.** Only after Grade passes and only when the work contains a durable
+decision that will help a later session. Call your tool with the
+`role=dream` model, passing the full run history (your reasoning, Advise
+exchanges, the Grade verdict) and a first instruction to begin with
+`model: <its own id>`. It drafts an entry for `docs/DECISIONS.md` or says
+none is warranted. Present the exact proposed entry and wait for the normal
+file-change approval before writing it. No usable row: skip and say so.
 
-**Dream.** Run Dream only after Grade passes and only when the completed work
-contains a durable decision that will help a later session. Spawn a separate
-agent with:
-
-- `model: gpt-6-astra`
-- `reasoning_effort: medium`
-- no automatically inherited conversation context
-
-Supply the full run history explicitly, including Execute's reasoning, Advise
-exchanges, and the Grade verdict. Dream drafts an entry for
-`docs/DECISIONS.md`, or says that no durable entry is warranted. Execute must
-still present the exact proposed entry and wait for the repository's normal
-file-change approval before writing it.
-
-Use the available agent-spawn tool, named `Agent` or `spawn_agent` depending on
-the runtime. When overriding the model, start the role with fresh context and
-pass only the material specified above.
-
-Re-run the EAGD bootstrap if a role fires on nearly every task, since its
-trigger or model is then too expensive for the value it adds. Recalibrate or
-remove a role that does not fire over a long period instead of keeping unused
-process.
+**Re-calibrate** by re-running the bootstrap when: a role fires on nearly
+every task; a role never fires over a long period (remove it); Advise's
+decision-change rate (answer differed from prior leaning) sits near zero; or
+`SKIPPED` rows pile up. Count `SKIPPED` rows per Tool first, since a low
+firing rate from missing bindings is fixed by re-running from that harness,
+not by changing the trigger. Read the change rate per Tool, not in
+aggregate.
