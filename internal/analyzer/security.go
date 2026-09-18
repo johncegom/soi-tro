@@ -9,6 +9,11 @@ import (
 	"fmt"
 )
 
+// schemaSecretKey is an integrity checksum key, not a secret. It only detects
+// accidental hand-edits of schema.json; anyone who can edit that file can also
+// read this binary and recompute the signature. See DECISION-009.
+//
+//nolint:gosec // G101: integrity checksum, not a credential.
 const schemaSecretKey = "soi-tro-secure-openapi-schema-protection-key-2026"
 const signatureKey = "x_signature"
 

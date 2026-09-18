@@ -106,18 +106,22 @@ func ActiveFilePath(cfg Config) (path string, err error) {
 }
 
 // appendToFile opens a file in append mode and writes content to it.
-// Each call gets its own scoped file handle with a deferred close to prevent
-// double-close issues that would occur in a rollover scenario with a shared defer.
+// Each call gets its own scoped file handle; the Close error is returned so a
+// failed flush is not silently lost.
 // Security: uses 0o600 permissions — owner read/write only — to protect PII.
 func appendToFile(path, content string) error {
 	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
 	if err != nil {
 		return fmt.Errorf("failed to open export file %q: %w", path, err)
 	}
-	defer f.Close()
 
 	if _, err := fmt.Fprint(f, content); err != nil {
+		_ = f.Close()
 		return fmt.Errorf("failed to write to export file: %w", err)
+	}
+
+	if err := f.Close(); err != nil {
+		return fmt.Errorf("failed to close export file %q: %w", path, err)
 	}
 	return nil
 }

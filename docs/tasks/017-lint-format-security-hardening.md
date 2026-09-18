@@ -37,10 +37,10 @@ Phase 0, hygiene:
 
 Phase 1, security and correctness:
 
-- [ ] `Close` error is returned on the two write paths: `internal/analyzer/global_config.go` (`SaveGlobalAPIKey`) and `internal/exporter/exporter.go` (`appendToFile`).
-- [ ] Log file opened 0600 and log dir 0700 in `internal/logger/logger.go`, matching export-file permissions.
-- [ ] `schemaSecretKey` carries `//nolint:gosec // G101: integrity checksum, not a secret` and a doc comment stating what it protects against (accidental hand-edits). Decision recorded in `docs/DECISIONS.md`.
-- [ ] `.env.example` committed with `GEMINI_API_KEY=` placeholder.
+- [x] `Close` error is returned on the two write paths: `internal/analyzer/global_config.go` (`SaveGlobalAPIKey`) and `internal/exporter/exporter.go` (`appendToFile`).
+- [x] Log file opened 0600 and log dir 0700 in `internal/logger/logger.go`, matching export-file permissions.
+- [x] `schemaSecretKey` carries `//nolint:gosec // G101: integrity checksum, not a secret` and a doc comment stating what it protects against (accidental hand-edits). Decision recorded in `docs/DECISIONS.md`.
+- [x] `.env.example` committed with `GEMINI_API_KEY=` placeholder.
 
 Phase 2, make lint real:
 
@@ -73,10 +73,10 @@ Phase 3, test what matters:
 - [x] 0.1 `.gitattributes`, renormalize, gofmt 3 files.
 - [x] 0.2 `toolchain` line, pin action, fix gofumpt config key.
 - [x] 0.3 Remove stale coverage artifacts and duplicate skill file.
-- [ ] 1.1 Return `Close` errors on the two write paths.
-- [ ] 1.2 Log file/dir permissions.
-- [ ] 1.3 HMAC nolint + doc comment + DECISIONS entry.
-- [ ] 1.4 `.env.example`.
+- [x] 1.1 Return `Close` errors on the two write paths.
+- [x] 1.2 Log file/dir permissions.
+- [x] 1.3 HMAC nolint + doc comment + DECISIONS entry.
+- [x] 1.4 `.env.example`.
 - [ ] 2.1 Shrink `.golangci.yml`.
 - [ ] 2.2 `--fix` pass, review, commit separately.
 - [ ] 2.3 Hand fixes (revive, exhaustive).

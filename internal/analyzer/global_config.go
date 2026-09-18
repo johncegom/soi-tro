@@ -198,12 +198,16 @@ func SaveGlobalModel(model string) error {
 	if err != nil {
 		return fmt.Errorf("failed to open global config file for writing: %w", err)
 	}
-	defer fileWrite.Close()
 
 	encoder := json.NewEncoder(fileWrite)
 	encoder.SetIndent("", "  ")
 	if err := encoder.Encode(&cfg); err != nil {
+		_ = fileWrite.Close()
 		return fmt.Errorf("failed to encode global config JSON: %w", err)
+	}
+
+	if err := fileWrite.Close(); err != nil {
+		return fmt.Errorf("failed to close global config file: %w", err)
 	}
 
 	return nil
