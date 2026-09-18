@@ -24,7 +24,7 @@ func TestLoadAndSaveConfig(t *testing.T) {
 	}`
 
 	// 2. Ghi và cố gắng tải tệp chưa ký -> Phải trả về lỗi ErrSchemaTampered
-	err := os.WriteFile(configPath, []byte(rawJSON), 0644)
+	err := os.WriteFile(configPath, []byte(rawJSON), 0o644)
 	must.NoError(err)
 
 	_, err = LoadConfig(configPath)
@@ -33,7 +33,7 @@ func TestLoadAndSaveConfig(t *testing.T) {
 	// 3. Ký nội dung JSON và ghi lại vào tệp
 	signedBytes, err := SignSchema([]byte(rawJSON))
 	must.NoError(err)
-	err = os.WriteFile(configPath, signedBytes, 0644)
+	err = os.WriteFile(configPath, signedBytes, 0o644)
 	must.NoError(err)
 
 	// 4. Tải tệp đã ký -> Phải thành công

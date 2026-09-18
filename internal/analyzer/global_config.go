@@ -12,6 +12,9 @@ import (
 	"github.com/charmbracelet/huh"
 )
 
+// DefaultModel is used when no model is configured.
+const DefaultModel = "gemini-3.1-flash-lite"
+
 //go:embed schema.json
 var defaultSchemaBytes []byte
 
@@ -35,13 +38,10 @@ func EnsureSchemaFile() (string, error) {
 	// Check if file exists
 	if _, err := os.Stat(schemaPath); err == nil {
 		// Migration check: if schema exists but is not signed (e.g. legacy version), sign and lock it now.
-		data, err := os.ReadFile(schemaPath)
-		if err == nil {
-			if VerifySchema(data) != nil {
-				signedData, err := SignSchema(data)
-				if err == nil {
-					_ = os.WriteFile(schemaPath, signedData, 0o600)
-				}
+		// See DECISION-009: this also re-signs hand-edited files.
+		if data, readErr := os.ReadFile(schemaPath); readErr == nil && VerifySchema(data) != nil {
+			if signedData, signErr := SignSchema(data); signErr == nil {
+				_ = os.WriteFile(schemaPath, signedData, 0o600)
 			}
 		}
 		return schemaPath, nil // already exists, nothing to do
@@ -120,7 +120,7 @@ func SaveGlobalAPIKey(key string) error {
 	var existing GlobalConfig
 	if fileRead, err := os.Open(configPath); err == nil {
 		_ = json.NewDecoder(fileRead).Decode(&existing)
-		fileRead.Close()
+		_ = fileRead.Close()
 	}
 
 	configDir := filepath.Dir(configPath)
@@ -154,21 +154,21 @@ func SaveGlobalAPIKey(key string) error {
 func GetGlobalModel() string {
 	configPath, err := GetGlobalConfigPath()
 	if err != nil {
-		return "gemini-3.1-flash-lite"
+		return DefaultModel
 	}
 	file, err := os.Open(configPath)
 	if err != nil {
-		return "gemini-3.1-flash-lite"
+		return DefaultModel
 	}
 	defer file.Close()
 
 	var cfg GlobalConfig
 	decoder := json.NewDecoder(file)
 	if err := decoder.Decode(&cfg); err != nil {
-		return "gemini-3.1-flash-lite"
+		return DefaultModel
 	}
 	if cfg.Model == "" {
-		return "gemini-3.1-flash-lite"
+		return DefaultModel
 	}
 	return cfg.Model
 }
@@ -184,7 +184,7 @@ func SaveGlobalModel(model string) error {
 	file, err := os.Open(configPath)
 	if err == nil {
 		_ = json.NewDecoder(file).Decode(&cfg)
-		file.Close()
+		_ = file.Close()
 	}
 
 	cfg.Model = strings.TrimSpace(model)
@@ -236,7 +236,7 @@ func PromptAndSaveModel() error {
 	}
 
 	if selectedModel == "" {
-		selectedModel = "gemini-3.1-flash-lite"
+		selectedModel = DefaultModel
 	}
 
 	if err := SaveGlobalModel(selectedModel); err != nil {
@@ -268,7 +268,7 @@ func EnsureGlobalAPIKey() error {
 	// 2. Try to load from the global config file
 	key, err := LoadGlobalAPIKey()
 	if err == nil && key != "" {
-		os.Setenv("GEMINI_API_KEY", key)
+		_ = os.Setenv("GEMINI_API_KEY", key)
 		return nil
 	}
 
@@ -304,7 +304,7 @@ func EnsureGlobalAPIKey() error {
 	}
 
 	// Set in environment for current process execution
-	os.Setenv("GEMINI_API_KEY", apiKeyInput)
+	_ = os.Setenv("GEMINI_API_KEY", apiKeyInput)
 
 	fmt.Println("\n✨ Đã lưu cấu hình API Key thành công vào: ~\\.config\\soi-tro\\config.json")
 	fmt.Println("Ứng dụng sẽ tự động sử dụng khóa này từ nay về sau!")

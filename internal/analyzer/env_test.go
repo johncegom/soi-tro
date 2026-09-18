@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestParseEnv(t *testing.T) {
@@ -72,7 +73,7 @@ func TestParseEnv(t *testing.T) {
 func TestLoadEnv(t *testing.T) {
 	t.Run("file does not exist", func(t *testing.T) {
 		err := LoadEnv("non_existent_file.env")
-		assert.Error(t, err)
+		require.Error(t, err)
 	})
 
 	t.Run("successful load with various formats", func(t *testing.T) {
@@ -80,8 +81,8 @@ func TestLoadEnv(t *testing.T) {
 		tmpDir := t.TempDir()
 		envFile := filepath.Join(tmpDir, ".env")
 		content := "TEST_KEY_LOAD_ENV=test_value\nANOTHER_TEST_KEY=\"another_value\"\n"
-		err := os.WriteFile(envFile, []byte(content), 0644)
-		assert.NoError(t, err)
+		err := os.WriteFile(envFile, []byte(content), 0o644)
+		require.NoError(t, err)
 
 		// Clean up environment variables afterwards
 		t.Cleanup(func() {
@@ -91,7 +92,7 @@ func TestLoadEnv(t *testing.T) {
 
 		// Load the env file
 		err = LoadEnv(envFile)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		// Verify env vars are set
 		assert.Equal(t, "test_value", os.Getenv("TEST_KEY_LOAD_ENV"))
@@ -102,8 +103,8 @@ func TestLoadEnv(t *testing.T) {
 		tmpDir := t.TempDir()
 		envFile := filepath.Join(tmpDir, ".env")
 		content := "# This is a comment\n\nKEY1=value1\n  \nKEY2=value2\n"
-		err := os.WriteFile(envFile, []byte(content), 0644)
-		assert.NoError(t, err)
+		err := os.WriteFile(envFile, []byte(content), 0o644)
+		require.NoError(t, err)
 
 		t.Cleanup(func() {
 			os.Unsetenv("KEY1")
@@ -111,7 +112,7 @@ func TestLoadEnv(t *testing.T) {
 		})
 
 		err = LoadEnv(envFile)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, "value1", os.Getenv("KEY1"))
 		assert.Equal(t, "value2", os.Getenv("KEY2"))
 	})
@@ -120,8 +121,8 @@ func TestLoadEnv(t *testing.T) {
 		tmpDir := t.TempDir()
 		envFile := filepath.Join(tmpDir, ".env")
 		content := "  KEY_ONE  =   val1  \nKEY_TWO = val2"
-		err := os.WriteFile(envFile, []byte(content), 0644)
-		assert.NoError(t, err)
+		err := os.WriteFile(envFile, []byte(content), 0o644)
+		require.NoError(t, err)
 
 		t.Cleanup(func() {
 			os.Unsetenv("KEY_ONE")
@@ -129,7 +130,7 @@ func TestLoadEnv(t *testing.T) {
 		})
 
 		err = LoadEnv(envFile)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, "val1", os.Getenv("KEY_ONE"))
 		assert.Equal(t, "val2", os.Getenv("KEY_TWO"))
 	})
@@ -138,8 +139,8 @@ func TestLoadEnv(t *testing.T) {
 		tmpDir := t.TempDir()
 		envFile := filepath.Join(tmpDir, ".env")
 		content := "DOUBLE_QUOTED=\"value with spaces\"\nSINGLE_QUOTED='another value'"
-		err := os.WriteFile(envFile, []byte(content), 0644)
-		assert.NoError(t, err)
+		err := os.WriteFile(envFile, []byte(content), 0o644)
+		require.NoError(t, err)
 
 		t.Cleanup(func() {
 			os.Unsetenv("DOUBLE_QUOTED")
@@ -147,7 +148,7 @@ func TestLoadEnv(t *testing.T) {
 		})
 
 		err = LoadEnv(envFile)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, "value with spaces", os.Getenv("DOUBLE_QUOTED"))
 		assert.Equal(t, "another value", os.Getenv("SINGLE_QUOTED"))
 	})
@@ -156,8 +157,8 @@ func TestLoadEnv(t *testing.T) {
 		tmpDir := t.TempDir()
 		envFile := filepath.Join(tmpDir, ".env")
 		content := "VALID_KEY=valid_value\nINVALID_LINE_NO_EQUALS\nANOTHER_VALID=another"
-		err := os.WriteFile(envFile, []byte(content), 0644)
-		assert.NoError(t, err)
+		err := os.WriteFile(envFile, []byte(content), 0o644)
+		require.NoError(t, err)
 
 		t.Cleanup(func() {
 			os.Unsetenv("VALID_KEY")
@@ -165,7 +166,7 @@ func TestLoadEnv(t *testing.T) {
 		})
 
 		err = LoadEnv(envFile)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, "valid_value", os.Getenv("VALID_KEY"))
 		assert.Equal(t, "another", os.Getenv("ANOTHER_VALID"))
 	})
@@ -174,11 +175,11 @@ func TestLoadEnv(t *testing.T) {
 		tmpDir := t.TempDir()
 		envFile := filepath.Join(tmpDir, ".env")
 		content := ""
-		err := os.WriteFile(envFile, []byte(content), 0644)
-		assert.NoError(t, err)
+		err := os.WriteFile(envFile, []byte(content), 0o644)
+		require.NoError(t, err)
 
 		err = LoadEnv(envFile)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	})
 }
 

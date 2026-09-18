@@ -268,7 +268,7 @@ func TestWriteResult_MultipleSequentialWrites(t *testing.T) {
 	}
 
 	// Write multiple results sequentially
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		err := exporter.WriteResult(cfg, result, nil)
 		is.NoError(err)
 	}

@@ -1,3 +1,4 @@
+// Command soi-tro is an interactive CLI that analyzes Vietnamese rental posts with Gemini.
 package main
 
 import (
@@ -6,19 +7,19 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
-
+	"path/filepath"
 	"soi-tro/internal/analyzer"
 	"soi-tro/internal/database"
 	"soi-tro/internal/exporter"
 	"soi-tro/internal/gemini"
 	"soi-tro/internal/logger"
 	"soi-tro/internal/ui"
+	"strings"
 
 	"github.com/charmbracelet/huh"
 )
 
-//nolint:wsl_v5 // Keep logging changes aligned with the existing orchestration layout.
+//nolint:gocyclo,funlen // TODO(task 017 phase 3): body moves into run(); dispatch loop is the whole CLI today.
 func main() {
 	// Initialize logger
 	logCfg := logger.LoadFromEnv()
@@ -169,22 +170,22 @@ func main() {
 					if err != nil {
 						logger.FromContext(analysisCtx).Error("image read failed", "operation", "input.read_image", "error", "read_image")
 						fmt.Printf("❌ Lỗi khi đọc file hình ảnh: %v\n", err)
-						retryChoice := ui.PromptErrorRetry(inputRes.Type)
-						if retryChoice == "retry" {
+						switch ui.PromptErrorRetry(inputRes.Type) {
+						case "retry":
 							continue
-						} else if retryChoice == "change" {
+						case "change":
 							break // break inner loop to prompt for input again
-						} else {
+						default:
 							break analyzeLoop // back to main menu
 						}
 					}
 
-					lowerPath := strings.ToLower(inputRes.ImagePath)
-					if strings.HasSuffix(lowerPath, ".png") {
+					switch strings.ToLower(filepath.Ext(inputRes.ImagePath)) {
+					case ".png":
 						mimeType = "image/png"
-					} else if strings.HasSuffix(lowerPath, ".webp") {
+					case ".webp":
 						mimeType = "image/webp"
-					} else {
+					default:
 						mimeType = "image/jpeg" // .jpg hoặc .jpeg
 					}
 				}
@@ -195,12 +196,12 @@ func main() {
 				result, err := client.ExtractRentalInfo(analysisCtx, inputRes.Text, imageBytes, mimeType, cfg.RequiredFields)
 				if err != nil {
 					fmt.Printf("\n❌ Lỗi phân tích tin đăng qua Gemini API: %v\n", err)
-					retryChoice := ui.PromptErrorRetry(inputRes.Type)
-					if retryChoice == "retry" {
+					switch ui.PromptErrorRetry(inputRes.Type) {
+					case "retry":
 						continue
-					} else if retryChoice == "change" {
+					case "change":
 						break // break inner loop to prompt for input again
-					} else {
+					default:
 						break analyzeLoop // back to main menu
 					}
 				}

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDefaultConfig(t *testing.T) {
@@ -31,14 +32,9 @@ func TestDefaultConfig(t *testing.T) {
 
 func TestLoadFromEnv(t *testing.T) {
 	// Set environment variables
-	os.Setenv("LOG_LEVEL", "debug")
-	os.Setenv("LOG_FORMAT", "json")
-	os.Setenv("LOG_CONSOLE", "false")
-	defer func() {
-		os.Unsetenv("LOG_LEVEL")
-		os.Unsetenv("LOG_FORMAT")
-		os.Unsetenv("LOG_CONSOLE")
-	}()
+	t.Setenv("LOG_LEVEL", "debug")
+	t.Setenv("LOG_FORMAT", "json")
+	t.Setenv("LOG_CONSOLE", "false")
 
 	cfg := LoadFromEnv()
 
@@ -185,7 +181,7 @@ func TestInit_ErrorCases(t *testing.T) {
 		}
 
 		err := Init(cfg)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid logger configuration")
 		resetLogger()
 	})
@@ -198,7 +194,7 @@ func TestInit_ErrorCases(t *testing.T) {
 		}
 
 		err := Init(cfg)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid logger configuration")
 		resetLogger()
 	})
@@ -211,7 +207,7 @@ func TestInit_ErrorCases(t *testing.T) {
 		}
 
 		err := Init(cfg)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid logger configuration")
 		resetLogger()
 	})
@@ -235,7 +231,7 @@ func TestInit_DifferentLevels(t *testing.T) {
 			}
 
 			err := Init(cfg)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			Info("test message")
 			resetLogger()
 		})
@@ -260,7 +256,7 @@ func TestInit_DifferentFormats(t *testing.T) {
 			}
 
 			err := Init(cfg)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			Info("test message")
 			resetLogger()
 		})
@@ -281,7 +277,7 @@ func TestInit_WithConsole(t *testing.T) {
 	}
 
 	err := Init(cfg)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	Info("test message")
 	resetLogger()
 }
@@ -300,7 +296,7 @@ func TestInit_WithConsoleJSON(t *testing.T) {
 	}
 
 	err := Init(cfg)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	Info("test message")
 	resetLogger()
 }
@@ -335,7 +331,7 @@ func TestLoggingFunctions(t *testing.T) {
 	}
 
 	err := Init(cfg)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Test all logging functions
 	Debug("debug message", "key", "value")
@@ -370,7 +366,7 @@ func TestWith(t *testing.T) {
 	}
 
 	err := Init(cfg)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	logger := With("custom_key", "custom_value")
 	assert.NotNil(t, logger)
@@ -393,7 +389,7 @@ func TestInit_DefaultLevel(t *testing.T) {
 	}
 
 	err := Init(cfg)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Test that the logger was initialized correctly
 	logger := Get()
@@ -417,7 +413,7 @@ func TestInit_WithWhitespaceLevel(t *testing.T) {
 	}
 
 	err := Init(cfg)
-	assert.Error(t, err)
+	require.Error(t, err)
 	resetLogger()
 }
 

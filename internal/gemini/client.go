@@ -1,9 +1,12 @@
+// Package gemini wraps the Gemini API for rental extraction and export configs.
 package gemini
 
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"soi-tro/internal/analyzer"
 	"soi-tro/internal/logger"
@@ -51,7 +54,7 @@ func NewClient(ctx context.Context) (client *Client, err error) {
 
 	apiKey := os.Getenv("GEMINI_API_KEY")
 	if apiKey == "" {
-		return nil, fmt.Errorf("GEMINI_API_KEY environment variable is not set")
+		return nil, errors.New("GEMINI_API_KEY environment variable is not set")
 	}
 
 	// Initialize the official GenAI Client (picks up GEMINI_API_KEY from environment)
@@ -76,8 +79,6 @@ func wrapListing(text string) string {
 }
 
 // ExtractRentalInfo performs the parsing using the gemini-3.1-flash-lite model.
-//
-//nolint:gocyclo,wsl_v5 // Existing extraction flow exceeds thresholds; logging adds no branch.
 func (c *Client) ExtractRentalInfo(ctx context.Context, text string, imageBytes []byte, imageMIME string, requiredFields []string) (result *RentalExtractionResult, err error) {
 	started := time.Now()
 	failureStage := "validate_input"
@@ -100,7 +101,7 @@ func (c *Client) ExtractRentalInfo(ctx context.Context, text string, imageBytes 
 	}
 
 	if len(parts) == 0 {
-		return nil, fmt.Errorf("either text listing or image file must be provided")
+		return nil, errors.New("either text listing or image file must be provided")
 	}
 
 	contents := []*genai.Content{
@@ -168,7 +169,7 @@ Tin nhắn mẫu (trong 'sample_messages', chính xác 2 tin):
 
 	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
 		failureStage = "empty_response"
-		return nil, fmt.Errorf("no response candidates returned by Gemini")
+		return nil, errors.New("no response candidates returned by Gemini")
 	}
 
 	responseText := resp.Candidates[0].Content.Parts[0].Text
@@ -261,9 +262,7 @@ func SaveSchema(filePath string, schema *genai.Schema, xRequiredFields []string)
 	}
 
 	// Merge all schema properties into unified map
-	for k, v := range schemaMap {
-		unified[k] = v
-	}
+	maps.Copy(unified, schemaMap)
 
 	unified["x_required_fields"] = xRequiredFields
 

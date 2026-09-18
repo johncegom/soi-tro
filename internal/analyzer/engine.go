@@ -1,3 +1,4 @@
+// Package analyzer loads the schema and global config and checks rental posts against them.
 package analyzer
 
 import (
@@ -32,7 +33,7 @@ func LoadConfig(filePath string) (*Config, error) {
 
 // SaveConfig writes the configuration back to a JSON file path
 func SaveConfig(filePath string, config *Config) error {
-	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
+	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
 		return fmt.Errorf("failed to open config file for writing: %w", err)
 	}

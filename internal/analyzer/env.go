@@ -46,7 +46,7 @@ func LoadEnv(filename string) error {
 
 	envMap := ParseEnv(string(bytes))
 	for k, v := range envMap {
-		os.Setenv(k, v)
+		_ = os.Setenv(k, v)
 	}
 
 	return nil
