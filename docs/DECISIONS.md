@@ -182,3 +182,28 @@ violating proportionality until a concrete feature needs it.
 sorting/filtering. Rows saved before this change have `price_vnd = NULL`
 until re-saved. The next task that needs price-based sorting or filtering
 can query `price_vnd` directly without further schema work.
+
+---
+
+## DECISION-009: Treat the schema.json HMAC key as an integrity checksum, not a secret
+
+**Context (2026-09-19):** `gosec` G101 flags `schemaSecretKey` in
+`internal/analyzer/security.go` as a hardcoded credential. Task 017 asked
+whether the key should move to an environment variable or keyring.
+
+**Decision:** Keep the key hardcoded, document it as an integrity checksum, and
+suppress G101 with a reasoned `//nolint`. The signature exists to catch
+accidental hand-edits of `~/.config/soi-tro/schema.json`, so the app can refuse
+a malformed schema with a clear error instead of sending garbage to Gemini.
+
+**Alternatives considered:** Loading the key from the environment or OS keyring
+would not change the threat model: anyone who can edit `schema.json` runs as the
+same user and can read the binary or the env, then recompute the HMAC. It would
+add a setup step for zero security gain.
+
+**Consequences:** The check is defense against mistakes, not against a local
+attacker. Note that `EnsureGlobalSchema` re-signs any file that fails
+verification at startup (legacy migration path), so a hand-edit made while the
+app is not running is silently blessed on the next start; only edits made
+between startup and use are caught. Rotating the constant is therefore harmless.
+Tightening that migration path is a separate decision if anyone needs it.

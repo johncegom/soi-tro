@@ -46,13 +46,13 @@ func Init(cfg Config) error {
 
 		// Create log directory if it doesn't exist
 		logDir := filepath.Dir(cfg.OutputPath)
-		if err := os.MkdirAll(logDir, 0o755); err != nil {
+		if err := os.MkdirAll(logDir, 0o700); err != nil {
 			initErr = fmt.Errorf("failed to create log directory: %w", err)
 			return
 		}
 
 		// Open log file
-		logFile, err := os.OpenFile(cfg.OutputPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+		logFile, err := os.OpenFile(cfg.OutputPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 		if err != nil {
 			initErr = fmt.Errorf("failed to open log file: %w", err)
 			return
