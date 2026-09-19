@@ -52,7 +52,7 @@ Phase 2, make lint real:
 
 Phase 3, test what matters:
 
-- [ ] Body of `main` extracted into `run(ctx context.Context, stdin io.Reader, stdout io.Writer) error` in `cmd/`; dispatch branches have unit tests; `cmd` no longer shows `[no test files]`.
+- [x] Body of `main` extracted into `run(ctx context.Context) error` in `cmd/` (signature deviation, see Program design); dispatch branches have unit tests; `cmd` no longer shows `[no test files]`.
 - [x] Tests use `t.Setenv` instead of `os.Setenv` (clears `usetesting`).
 
 ## Test Plan
@@ -82,16 +82,49 @@ Phase 3, test what matters:
 - [x] 2.3 Hand fixes (revive, exhaustive).
 - [x] 2.4 gocyclo threshold and nolints.
 - [x] 2.5 Drop `only-new-issues`; verify CI red on a bad PR, then green.
-- [ ] 3.1 Extract `run` from `main`, add tests.
+- [x] 3.1 Extract `run` from `main`, add tests.
 - [x] 3.2 `t.Setenv` migration.
+
+## Program design (Phase 3, item 3.1)
+
+Advise ran 2026-09-20 (`docs/eagd-log.md`). Package boundary: `cmd` only; no
+change to `internal/*`.
+
+- `type action int` with `actionAnalyze` (zero value, matches today's
+  fall-through), `actionHistory`, `actionManage`, `actionExport`,
+  `actionModel`, `actionExit`.
+- `func dispatch(choice string) action`: pure map from menu value to action;
+  unknown value returns `actionAnalyze`.
+- `func mimeTypeFor(path string) string`: extracted verbatim from the
+  extension switch (`.png`, `.webp`, default `image/jpeg`).
+- `func runAnalyze(ctx context.Context, schemaPath string) error`: the body of
+  the "analyze" branch moved verbatim (labels and `goto` move with it).
+  `log.Fatalf` and `os.Exit(1)` become returned errors.
+- `func run(ctx context.Context) error`: env load, DB init, API key, schema,
+  then the menu loop switching on `dispatch`. Startup failures return the same
+  Vietnamese messages `main` used to `log.Fatalf`.
+- `main`: init logger, build ctx, `if err := run(ctx); err != nil { log.Fatal(err) }`.
+- Flow: `main` -> `run` -> (`ui.RunFormWithArrows` -> `dispatch`) -> ui handler
+  or `runAnalyze`.
+
+Deviations from item 3.1 as written:
+
+- Signature is `run(ctx context.Context) error`, not `(ctx, stdin, stdout)`.
+  The item predates reading the UI layer: `huh` and every `ui.*` function use
+  `os.Stdin`/`os.Stdout` directly, so the extra parameters would be dead.
+- Only `dispatch` and `mimeTypeFor` get unit tests. `run` and `runAnalyze` need
+  a TTY and Gemini, so they are not unit-tested; `dispatch` is close to a
+  lookup table, so `cmd` coverage is nominal.
+- On Gemini client init failure the process still exits non-zero, but through
+  `main`'s `log.Fatal` (one extra error line) instead of a bare `os.Exit(1)`.
 
 ## Notes and deviations
 
 - Phases are independently shippable; ship each as its own PR.
 - 2.1 changes what contributors are held to. Confirm the disable list before
   applying; the rest of the task is mechanical.
-- Phase 2 deviations from the plan above: `main` carries a temporary
-  `//nolint:gocyclo,funlen` until Phase 3 extracts `run` (lint had to exit 0);
+- Phase 2 deviations from the plan above: `main` carried a temporary
+  `//nolint:gocyclo,funlen` until Phase 3 extracted `run` (removed in 3.1; `runAnalyze` now carries `//nolint:gocyclo`, complexity 25, moved verbatim);
   3.2 (`t.Setenv`) was pulled into Phase 2 because `usetesting` blocked green;
   extra exclusions added on evidence: `funlen`/gosec G104 in tests, testifylint
   `require-error`, dupword ignore for Vietnamese reduplication ("song song",

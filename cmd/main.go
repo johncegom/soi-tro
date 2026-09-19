@@ -7,19 +7,16 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"soi-tro/internal/analyzer"
 	"soi-tro/internal/database"
 	"soi-tro/internal/exporter"
 	"soi-tro/internal/gemini"
 	"soi-tro/internal/logger"
 	"soi-tro/internal/ui"
-	"strings"
 
 	"github.com/charmbracelet/huh"
 )
 
-//nolint:gocyclo,funlen // TODO(task 017 phase 3): body moves into run(); dispatch loop is the whole CLI today.
 func main() {
 	// Initialize logger
 	logCfg := logger.LoadFromEnv()
@@ -30,6 +27,13 @@ func main() {
 
 	// Create context with request ID for this session
 	ctx := logger.NewContext(context.Background())
+	if err := run(ctx); err != nil {
+		log.Fatal(err)
+	}
+}
+
+// run initializes local state and serves the main menu until the user exits.
+func run(ctx context.Context) error {
 	sessionLog := logger.FromContext(ctx)
 
 	// Load environment variables from the secure .env file
@@ -38,13 +42,13 @@ func main() {
 
 	// Initialize the history database
 	if err := database.InitDB(); err != nil {
-		log.Fatalf("❌ Lỗi khởi tạo cơ sở dữ liệu lịch sử: %v", err)
+		return fmt.Errorf("❌ Lỗi khởi tạo cơ sở dữ liệu lịch sử: %w", err)
 	}
 
 	// Ensure GEMINI_API_KEY is available (check env, load from global config, or prompt)
 	if err := analyzer.EnsureGlobalAPIKey(); err != nil {
 		sessionLog.Error("API key configuration failed", "operation", "config.api_key", "error", "configure_api_key")
-		log.Fatalf("❌ Lỗi cấu hình API Key: %v", err)
+		return fmt.Errorf("❌ Lỗi cấu hình API Key: %w", err)
 	}
 	sessionLog.Info("API key configuration completed", "operation", "config.api_key")
 
@@ -52,7 +56,7 @@ func main() {
 	schemaPath, err := analyzer.EnsureSchemaFile()
 	if err != nil {
 		sessionLog.Error("schema initialization failed", "operation", "schema.ensure", "error", "initialize_schema")
-		log.Fatalf("❌ Lỗi cấu hình tệp cấu hình (schema.json): %v", err)
+		return fmt.Errorf("❌ Lỗi cấu hình tệp cấu hình (schema.json): %w", err)
 	}
 	sessionLog.Info("schema initialization completed", "operation", "schema.ensure")
 
@@ -80,122 +84,98 @@ func main() {
 		backPressed, err := ui.RunFormWithArrows(form)
 		if err != nil {
 			sessionLog.Error("main menu selection failed", "operation", "ui.main_menu", "error", "select_action")
-			log.Fatalf("❌ Lỗi chọn chức năng chính: %v", err)
+			return fmt.Errorf("❌ Lỗi chọn chức năng chính: %w", err)
 		}
 		if backPressed {
 			mainChoice = "exit"
 		}
 
-		if mainChoice == "exit" {
+		switch dispatch(mainChoice) {
+		case actionExit:
 			fmt.Println("\nCảm ơn bạn đã sử dụng Soi Trọ! Tạm biệt.")
-			break
-		}
-
-		if mainChoice == "history" {
+			return nil
+		case actionHistory:
 			if err := ui.ShowHistoryAndCompareMenu(); err != nil {
 				sessionLog.Error("history view failed", "operation", "ui.history", "error", "show_history")
 				fmt.Printf("❌ Lỗi hiển thị lịch sử: %v\n", err)
 			}
-			continue
-		}
-
-		if mainChoice == "manage" {
+		case actionManage:
 			if err := ui.ManageSchemaLoop(); err != nil {
 				sessionLog.Error("schema management failed", "operation", "ui.schema", "error", "manage_schema")
 				fmt.Printf("❌ Lỗi quản lý schema: %v\n", err)
 			}
-			continue
-		}
-
-		if mainChoice == "export" {
+		case actionExport:
 			if err := ui.ConfigureExport(); err != nil {
 				sessionLog.Error("export configuration failed", "operation", "ui.export_config", "error", "configure_export")
 				fmt.Printf("❌ Lỗi cài đặt xuất kết quả: %v\n", err)
 			}
-			continue
-		}
-
-		if mainChoice == "model" {
+		case actionModel:
 			if err := analyzer.PromptAndSaveModel(); err != nil {
 				sessionLog.Error("model configuration failed", "operation", "ui.model_config", "error", "configure_model")
 				fmt.Printf("❌ Lỗi cấu hình mô hình: %v\n", err)
 			}
-			continue
+		case actionAnalyze:
+			if err := runAnalyze(ctx, schemaPath); err != nil {
+				return err
+			}
 		}
-		// 1. Load configuration from schema.json
-		cfg, err := analyzer.LoadConfig(schemaPath)
-		if err != nil {
-			sessionLog.Error("schema configuration load failed", "operation", "schema.load_config", "error", "load_config")
-			log.Fatalf("❌ Lỗi tải tệp cấu hình (%s): %v", schemaPath, err)
-		}
-		sessionLog.Info("schema configuration load completed", "operation", "schema.load_config")
+	}
+}
 
-		// Loop to manage the input mode & retries
-	analyzeLoop:
+// runAnalyze drives the "analyze new listing" flow until the user goes back to the menu.
+//
+//nolint:gocyclo // moved verbatim out of main; the retry/export loops share labels, splitting them is a separate change.
+func runAnalyze(ctx context.Context, schemaPath string) error {
+	sessionLog := logger.FromContext(ctx)
+
+	// 1. Load configuration from schema.json
+	cfg, err := analyzer.LoadConfig(schemaPath)
+	if err != nil {
+		sessionLog.Error("schema configuration load failed", "operation", "schema.load_config", "error", "load_config")
+		return fmt.Errorf("❌ Lỗi tải tệp cấu hình (%s): %w", schemaPath, err)
+	}
+	sessionLog.Info("schema configuration load completed", "operation", "schema.load_config")
+
+	// Loop to manage the input mode & retries
+analyzeLoop:
+	for {
+		// 2. Display interactive CLI Forms to gather input (text listing or image file path)
+		inputRes, err := ui.GetUserInput()
+		if err != nil {
+			if errors.Is(err, ui.ErrGoBack) {
+				break analyzeLoop // back to main menu
+			}
+			sessionLog.Error("listing input failed", "operation", "ui.listing_input", "error", "read_input")
+			log.Printf("❌ Lỗi nhận dữ liệu đầu vào: %v", err)
+			break analyzeLoop
+		}
+
+		// Inner loop to retry analyzing the same inputRes
 		for {
-			// 2. Display interactive CLI Forms to gather input (text listing or image file path)
-			inputRes, err := ui.GetUserInput()
+			analysisCtx := logger.NewContext(context.Background())
+
+			// 3. Initialize Gemini API Client
+			client, err := gemini.NewClient(analysisCtx)
 			if err != nil {
-				if errors.Is(err, ui.ErrGoBack) {
-					break analyzeLoop // back to main menu
-				}
-				sessionLog.Error("listing input failed", "operation", "ui.listing_input", "error", "read_input")
-				log.Printf("❌ Lỗi nhận dữ liệu đầu vào: %v", err)
-				break analyzeLoop
+				fmt.Println("\n❌ LỖI KHỞI TẠO CLIENT GEMINI:")
+				fmt.Println("   Hãy đảm bảo bạn đã thiết lập biến môi trường GEMINI_API_KEY.")
+				fmt.Println("   Bạn có thể điền thông tin vào tệp bảo mật .env:")
+				fmt.Println("     GEMINI_API_KEY=\"KHÓA_TỪ_GOOGLE_AI_STUDIO\"")
+				fmt.Println("   Hoặc chạy qua PowerShell:")
+				fmt.Println("     $env:GEMINI_API_KEY=\"KHÓA_TỪ_GOOGLE_AI_STUDIO\"")
+				return fmt.Errorf("khởi tạo client Gemini: %w", err)
 			}
 
-			// Inner loop to retry analyzing the same inputRes
-			for {
-				analysisCtx := logger.NewContext(context.Background())
+			var imageBytes []byte
+			var mimeType string
 
-				// 3. Initialize Gemini API Client
-				client, err := gemini.NewClient(analysisCtx)
+			// Handle multimodal input if an image file path is chosen
+			if inputRes.Type == ui.InputTypeImage {
+				fmt.Printf("\n📂 Đang tải file hình ảnh: %s...\n", inputRes.ImagePath)
+				imageBytes, err = os.ReadFile(inputRes.ImagePath)
 				if err != nil {
-					fmt.Println("\n❌ LỖI KHỞI TẠO CLIENT GEMINI:")
-					fmt.Println("   Hãy đảm bảo bạn đã thiết lập biến môi trường GEMINI_API_KEY.")
-					fmt.Println("   Bạn có thể điền thông tin vào tệp bảo mật .env:")
-					fmt.Println("     GEMINI_API_KEY=\"KHÓA_TỪ_GOOGLE_AI_STUDIO\"")
-					fmt.Println("   Hoặc chạy qua PowerShell:")
-					fmt.Println("     $env:GEMINI_API_KEY=\"KHÓA_TỪ_GOOGLE_AI_STUDIO\"")
-					os.Exit(1)
-				}
-
-				var imageBytes []byte
-				var mimeType string
-
-				// Handle multimodal input if an image file path is chosen
-				if inputRes.Type == ui.InputTypeImage {
-					fmt.Printf("\n📂 Đang tải file hình ảnh: %s...\n", inputRes.ImagePath)
-					imageBytes, err = os.ReadFile(inputRes.ImagePath)
-					if err != nil {
-						logger.FromContext(analysisCtx).Error("image read failed", "operation", "input.read_image", "error", "read_image")
-						fmt.Printf("❌ Lỗi khi đọc file hình ảnh: %v\n", err)
-						switch ui.PromptErrorRetry(inputRes.Type) {
-						case "retry":
-							continue
-						case "change":
-							break // break inner loop to prompt for input again
-						default:
-							break analyzeLoop // back to main menu
-						}
-					}
-
-					switch strings.ToLower(filepath.Ext(inputRes.ImagePath)) {
-					case ".png":
-						mimeType = "image/png"
-					case ".webp":
-						mimeType = "image/webp"
-					default:
-						mimeType = "image/jpeg" // .jpg hoặc .jpeg
-					}
-				}
-
-				// 4. Send the payload to Gemini and run extraction
-				modelName := analyzer.GetGlobalModel()
-				fmt.Printf("\n🤖 Đang phân tích thông tin bằng %s... Vui lòng đợi.\n", modelName)
-				result, err := client.ExtractRentalInfo(analysisCtx, inputRes.Text, imageBytes, mimeType, cfg.RequiredFields)
-				if err != nil {
-					fmt.Printf("\n❌ Lỗi phân tích tin đăng qua Gemini API: %v\n", err)
+					logger.FromContext(analysisCtx).Error("image read failed", "operation", "input.read_image", "error", "read_image")
+					fmt.Printf("❌ Lỗi khi đọc file hình ảnh: %v\n", err)
 					switch ui.PromptErrorRetry(inputRes.Type) {
 					case "retry":
 						continue
@@ -206,61 +186,80 @@ func main() {
 					}
 				}
 
-				// 5. Format and print the final compliance table & handle clipboard copying
-				ui.RenderResults(result, cfg)
-				if dbID, dbErr := database.SaveRental(result); dbErr == nil {
-					fmt.Printf("💾 Đã lưu kết quả phân tích vào lịch sử (Mã số: #%d)\n", dbID)
-				}
-				fmt.Println()
-
-				// 6. Load export config once to determine if export option should be shown.
-				exportCfg, exportConfigured, exportErr := gemini.LoadExportConfig(schemaPath)
-				if exportErr != nil {
-					logger.FromContext(analysisCtx).Error("export configuration load failed", "operation", "schema.load_export_config", "error", "load_export_config")
-					fmt.Printf("⚠️  Không thể đọc cấu hình xuất: %v\n", exportErr)
-					exportConfigured = false
-				}
-
-				// Build title map once for reuse across possible re-exports.
-				titleMap := map[string]string{}
-				if exportConfigured {
-					if schema, schemaErr := gemini.LoadSchema(schemaPath); schemaErr == nil {
-						for k, prop := range schema.Properties {
-							if prop.Title != "" {
-								titleMap[k] = prop.Title
-							}
-						}
-					} else {
-						logger.FromContext(analysisCtx).Error("export title schema load failed", "operation", "schema.load_export_titles", "error", "load_schema")
-					}
-				}
-
-				writeCfg := exporter.Config{
-					Dir:       exportCfg.Dir,
-					MaxSizeKB: exportCfg.MaxSizeKB,
-				}
-
-				// Post-result action loop — stays here until the user picks new/back.
-				exportDone := false
-				for {
-					nextChoice := ui.PromptAfterSuccess(exportConfigured, exportDone)
-					switch nextChoice {
-					case "export":
-						if writeErr := exporter.WriteResult(writeCfg, result, titleMap); writeErr != nil {
-							fmt.Printf("⚠️  Không thể xuất kết quả: %v\n", writeErr)
-						} else if filePath, pathErr := exporter.ActiveFilePath(writeCfg); pathErr == nil {
-							fmt.Printf("💾 Đã lưu kết quả vào: %s\n", filePath)
-							exportDone = true
-						}
-						// Stay in the loop so the user can pick another action.
-					case "new":
-						goto nextInput
-					default: // "back"
-						break analyzeLoop
-					}
-				}
-			nextInput:
+				mimeType = mimeTypeFor(inputRes.ImagePath)
 			}
+
+			// 4. Send the payload to Gemini and run extraction
+			modelName := analyzer.GetGlobalModel()
+			fmt.Printf("\n🤖 Đang phân tích thông tin bằng %s... Vui lòng đợi.\n", modelName)
+			result, err := client.ExtractRentalInfo(analysisCtx, inputRes.Text, imageBytes, mimeType, cfg.RequiredFields)
+			if err != nil {
+				fmt.Printf("\n❌ Lỗi phân tích tin đăng qua Gemini API: %v\n", err)
+				switch ui.PromptErrorRetry(inputRes.Type) {
+				case "retry":
+					continue
+				case "change":
+					break // break inner loop to prompt for input again
+				default:
+					break analyzeLoop // back to main menu
+				}
+			}
+
+			// 5. Format and print the final compliance table & handle clipboard copying
+			ui.RenderResults(result, cfg)
+			if dbID, dbErr := database.SaveRental(result); dbErr == nil {
+				fmt.Printf("💾 Đã lưu kết quả phân tích vào lịch sử (Mã số: #%d)\n", dbID)
+			}
+			fmt.Println()
+
+			// 6. Load export config once to determine if export option should be shown.
+			exportCfg, exportConfigured, exportErr := gemini.LoadExportConfig(schemaPath)
+			if exportErr != nil {
+				logger.FromContext(analysisCtx).Error("export configuration load failed", "operation", "schema.load_export_config", "error", "load_export_config")
+				fmt.Printf("⚠️  Không thể đọc cấu hình xuất: %v\n", exportErr)
+				exportConfigured = false
+			}
+
+			// Build title map once for reuse across possible re-exports.
+			titleMap := map[string]string{}
+			if exportConfigured {
+				if schema, schemaErr := gemini.LoadSchema(schemaPath); schemaErr == nil {
+					for k, prop := range schema.Properties {
+						if prop.Title != "" {
+							titleMap[k] = prop.Title
+						}
+					}
+				} else {
+					logger.FromContext(analysisCtx).Error("export title schema load failed", "operation", "schema.load_export_titles", "error", "load_schema")
+				}
+			}
+
+			writeCfg := exporter.Config{
+				Dir:       exportCfg.Dir,
+				MaxSizeKB: exportCfg.MaxSizeKB,
+			}
+
+			// Post-result action loop — stays here until the user picks new/back.
+			exportDone := false
+			for {
+				nextChoice := ui.PromptAfterSuccess(exportConfigured, exportDone)
+				switch nextChoice {
+				case "export":
+					if writeErr := exporter.WriteResult(writeCfg, result, titleMap); writeErr != nil {
+						fmt.Printf("⚠️  Không thể xuất kết quả: %v\n", writeErr)
+					} else if filePath, pathErr := exporter.ActiveFilePath(writeCfg); pathErr == nil {
+						fmt.Printf("💾 Đã lưu kết quả vào: %s\n", filePath)
+						exportDone = true
+					}
+					// Stay in the loop so the user can pick another action.
+				case "new":
+					goto nextInput
+				default: // "back"
+					break analyzeLoop
+				}
+			}
+		nextInput:
 		}
 	}
+	return nil
 }

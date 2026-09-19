@@ -1,0 +1,41 @@
+package main
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+)
+
+func TestDispatch(t *testing.T) {
+	tests := []struct {
+		choice string
+		want   action
+	}{
+		{"analyze", actionAnalyze},
+		{"history", actionHistory},
+		{"manage", actionManage},
+		{"export", actionExport},
+		{"model", actionModel},
+		{"exit", actionExit},
+		{"", actionAnalyze},
+		{"unknown", actionAnalyze},
+	}
+	for _, tt := range tests {
+		assert.Equal(t, tt.want, dispatch(tt.choice), "choice %q", tt.choice)
+	}
+}
+
+func TestMimeTypeFor(t *testing.T) {
+	tests := map[string]string{
+		"a.png":        "image/png",
+		"A.PNG":        "image/png",
+		"dir/b.webp":   "image/webp",
+		"c.jpg":        "image/jpeg",
+		"c.jpeg":       "image/jpeg",
+		"noextension":  "image/jpeg",
+		"weird.tar.gz": "image/jpeg",
+	}
+	for path, want := range tests {
+		assert.Equal(t, want, mimeTypeFor(path), path)
+	}
+}
