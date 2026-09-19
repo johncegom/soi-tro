@@ -137,3 +137,10 @@ Deviations from item 3.1 as written:
   until one has a bug); the duplicate gosec job in `security.yml` (runs
   `-no-fail`, never blocks, free SARIF dashboard, keep); parameterizing SQL
   identifiers in `addColumnIfMissing` (callers are constants).
+- PR #31 "Code scanning results / gosec" gate failed on 3 old findings whose lines
+  the PR touched (G304 x2, G204). Standalone gosec ignores `//nolint:gosec` and
+  `.golangci.yml`, so `security.yml` now passes `-exclude=G304` (same decision as
+  the golangci exclusion) and `scripts/release.go` uses `// #nosec G204`. The
+  job stays `-no-fail`. G101 at `internal/analyzer/security.go:17` remains an
+  open alert (it uses `//nolint`, which gosec ignores); untouched, so it does not
+  gate.

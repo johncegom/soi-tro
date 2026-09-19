@@ -36,7 +36,7 @@ jobs:
       - name: Run gosec
         uses: securego/gosec@v2.29.0
         with:
-          args: -no-fail -fmt sarif -out gosec-results.sarif ./...
+          args: -no-fail -exclude=G304 -fmt sarif -out gosec-results.sarif ./...
 
       - name: Upload gosec results
         if: always()

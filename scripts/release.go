@@ -13,7 +13,7 @@ import (
 )
 
 func runCmd(name string, args ...string) (string, error) {
-	cmd := exec.CommandContext(context.Background(), name, args...) //nolint:gosec // G204: args are literals from this script.
+	cmd := exec.CommandContext(context.Background(), name, args...) // #nosec G204 -- args are literals from this script.
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
