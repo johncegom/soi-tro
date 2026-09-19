@@ -1,3 +1,4 @@
+// Package logger configures the process-wide slog logger.
 package logger
 
 import (

@@ -11,6 +11,9 @@ import (
 	"github.com/charmbracelet/huh"
 )
 
+// backChoice is the menu value that returns to the previous screen.
+const backChoice = "back"
+
 // InputType represents the selected user input type.
 type InputType int
 
@@ -41,8 +44,7 @@ func (m *arrowModel) Init() tea.Cmd {
 }
 
 func (m *arrowModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch k := msg.(type) {
-	case tea.KeyMsg:
+	if k, ok := msg.(tea.KeyMsg); ok {
 		switch k.Type {
 		case tea.KeyLeft:
 			m.backPressed = true
@@ -50,11 +52,14 @@ func (m *arrowModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyRight:
 			// Translate Right arrow to Enter key
 			msg = tea.KeyMsg{Type: tea.KeyEnter}
+		default:
 		}
 	}
 
 	newForm, cmd := m.form.Update(msg)
-	m.form = newForm.(*huh.Form)
+	if f, ok := newForm.(*huh.Form); ok {
+		m.form = f
+	}
 
 	if m.form.State == huh.StateCompleted {
 		return m, tea.Quit
@@ -90,6 +95,8 @@ func RunFormWithArrows(form *huh.Form) (bool, error) {
 }
 
 // GetUserInput displays an interactive form in the terminal to capture input details.
+//
+//nolint:gocyclo,funlen // huh form wiring for every input type; splitting adds indirection without a bug to fix.
 func GetUserInput() (*InputResult, error) {
 	var inputChoice string
 	var textInput string
@@ -121,7 +128,8 @@ func GetUserInput() (*InputResult, error) {
 	res := &InputResult{}
 
 	// Step 2: Capture input based on selection
-	if inputChoice == "image" {
+	switch inputChoice {
+	case "image":
 		res.Type = InputTypeImage
 		imageForm := huh.NewForm(
 			huh.NewGroup(
@@ -166,7 +174,7 @@ func GetUserInput() (*InputResult, error) {
 			path = path[1 : len(path)-1]
 		}
 		res.ImagePath = strings.TrimSpace(path)
-	} else if inputChoice == "file" {
+	case "file":
 		res.Type = InputTypeText
 		fileForm := huh.NewForm(
 			huh.NewGroup(
@@ -212,7 +220,7 @@ func GetUserInput() (*InputResult, error) {
 			return nil, fmt.Errorf("lỗi khi đọc file văn bản: %w", err)
 		}
 		res.Text = string(bytes)
-	} else {
+	default:
 		res.Type = InputTypeText
 		fmt.Println("\n-------------------------------------------------------------------------")
 		fmt.Println("👉 HƯỚNG DẪN DÁN VĂN BẢN:")
@@ -253,13 +261,13 @@ func PromptErrorRetry(inputType InputType) string {
 		options = []huh.Option[string]{
 			huh.NewOption("1. Thử lại phân tích ảnh này (Retry)", "retry"),
 			huh.NewOption("2. Chọn ảnh khác (Change)", "change"),
-			huh.NewOption("3. Quay lại menu chính (Back)", "back"),
+			huh.NewOption("3. Quay lại menu chính (Back)", backChoice),
 		}
 	} else {
 		options = []huh.Option[string]{
 			huh.NewOption("1. Thử lại phân tích văn bản này (Retry)", "retry"),
 			huh.NewOption("2. Nhập văn bản khác (Change)", "change"),
-			huh.NewOption("3. Quay lại menu chính (Back)", "back"),
+			huh.NewOption("3. Quay lại menu chính (Back)", backChoice),
 		}
 	}
 
@@ -274,7 +282,7 @@ func PromptErrorRetry(inputType InputType) string {
 
 	backPressed, err := RunFormWithArrows(form)
 	if err != nil || backPressed {
-		return "back"
+		return backChoice
 	}
 	return choice
 }
@@ -295,13 +303,13 @@ func PromptAfterSuccess(exportConfigured, exportDone bool) string {
 	}
 	options = append(options,
 		huh.NewOption("3. Tiếp tục phân tích tin đăng khác", "new"),
-		huh.NewOption("4. Quay lại menu chính", "back"),
+		huh.NewOption("4. Quay lại menu chính", backChoice),
 	)
 
 	// Re-number the first option correctly when export is not shown.
 	if !exportConfigured {
 		options[0] = huh.NewOption("1. Tiếp tục phân tích tin đăng khác", "new")
-		options[1] = huh.NewOption("2. Quay lại menu chính", "back")
+		options[1] = huh.NewOption("2. Quay lại menu chính", backChoice)
 	}
 
 	form := huh.NewForm(
@@ -315,7 +323,7 @@ func PromptAfterSuccess(exportConfigured, exportDone bool) string {
 
 	backPressed, err := RunFormWithArrows(form)
 	if err != nil || backPressed {
-		return "back"
+		return backChoice
 	}
 	return choice
 }

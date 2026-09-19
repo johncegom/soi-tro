@@ -11,24 +11,14 @@ import (
 
 // mockUserHomeDir giả lập thư mục Home của người dùng sang thư mục tạm thời trong thời gian chạy test
 func mockUserHomeDir(t *testing.T) string {
+	t.Helper()
+	t.Helper()
 	tmpDir := t.TempDir()
 
-	origHome := os.Getenv("HOME")
-	origUserProfile := os.Getenv("USERPROFILE")
-	origHomeDrive := os.Getenv("HOMEDRIVE")
-	origHomePath := os.Getenv("HOMEPATH")
-
-	os.Setenv("HOME", tmpDir)
-	os.Setenv("USERPROFILE", tmpDir)
-	os.Setenv("HOMEDRIVE", "")
-	os.Setenv("HOMEPATH", "")
-
-	t.Cleanup(func() {
-		os.Setenv("HOME", origHome)
-		os.Setenv("USERPROFILE", origUserProfile)
-		os.Setenv("HOMEDRIVE", origHomeDrive)
-		os.Setenv("HOMEPATH", origHomePath)
-	})
+	t.Setenv("HOME", tmpDir)
+	t.Setenv("USERPROFILE", tmpDir)
+	t.Setenv("HOMEDRIVE", "")
+	t.Setenv("HOMEPATH", "")
 
 	return tmpDir
 }
@@ -94,11 +84,11 @@ func TestValidateGeminiAPIKey(t *testing.T) {
 
 			err := validateGeminiAPIKey(tt.key)
 			if tt.wantErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 				return
 			}
 
-			assert.NoError(t, err)
+			require.NoError(t, err)
 		})
 	}
 }
@@ -128,41 +118,29 @@ func TestEnsureSchemaFile(t *testing.T) {
 }
 
 func TestEnsureGlobalAPIKey_EnvExists(t *testing.T) {
-	origKey := os.Getenv("GEMINI_API_KEY")
-	os.Setenv("GEMINI_API_KEY", "existing-env-key")
-	t.Cleanup(func() {
-		os.Setenv("GEMINI_API_KEY", origKey)
-	})
+	t.Setenv("GEMINI_API_KEY", "existing-env-key")
 
 	err := EnsureGlobalAPIKey()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, "existing-env-key", os.Getenv("GEMINI_API_KEY"))
 }
 
 func TestEnsureGlobalAPIKey_FromConfig(t *testing.T) {
 	_ = mockUserHomeDir(t)
-	origKey := os.Getenv("GEMINI_API_KEY")
-	os.Setenv("GEMINI_API_KEY", "")
-	t.Cleanup(func() {
-		os.Setenv("GEMINI_API_KEY", origKey)
-	})
+	t.Setenv("GEMINI_API_KEY", "")
 
 	testKey := "mock-test-api-key-999"
 	err := SaveGlobalAPIKey(testKey)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	err = EnsureGlobalAPIKey()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, testKey, os.Getenv("GEMINI_API_KEY"))
 }
 
 func TestEnsureGlobalAPIKey_ConfigFileDoesNotExist(t *testing.T) {
 	_ = mockUserHomeDir(t)
-	origKey := os.Getenv("GEMINI_API_KEY")
-	os.Setenv("GEMINI_API_KEY", "")
-	t.Cleanup(func() {
-		os.Setenv("GEMINI_API_KEY", origKey)
-	})
+	t.Setenv("GEMINI_API_KEY", "")
 
 	// Skip this test in non-interactive environments since it requires user input
 	t.Skip("Skipping interactive test in non-interactive environment")
@@ -170,17 +148,13 @@ func TestEnsureGlobalAPIKey_ConfigFileDoesNotExist(t *testing.T) {
 
 func TestEnsureGlobalAPIKey_ConfigFileInvalidJSON(t *testing.T) {
 	mockHome := mockUserHomeDir(t)
-	origKey := os.Getenv("GEMINI_API_KEY")
-	os.Setenv("GEMINI_API_KEY", "")
-	t.Cleanup(func() {
-		os.Setenv("GEMINI_API_KEY", origKey)
-	})
+	t.Setenv("GEMINI_API_KEY", "")
 
 	configPath := filepath.Join(mockHome, ".config", "soi-tro", "config.json")
-	err := os.MkdirAll(filepath.Dir(configPath), 0700)
-	assert.NoError(t, err)
-	err = os.WriteFile(configPath, []byte("invalid json"), 0600)
-	assert.NoError(t, err)
+	err := os.MkdirAll(filepath.Dir(configPath), 0o700)
+	require.NoError(t, err)
+	err = os.WriteFile(configPath, []byte("invalid json"), 0o600)
+	require.NoError(t, err)
 
 	// Skip this test in non-interactive environments since it requires user input
 	t.Skip("Skipping interactive test in non-interactive environment")
@@ -188,15 +162,11 @@ func TestEnsureGlobalAPIKey_ConfigFileInvalidJSON(t *testing.T) {
 
 func TestEnsureGlobalAPIKey_ConfigFileEmptyKey(t *testing.T) {
 	_ = mockUserHomeDir(t)
-	origKey := os.Getenv("GEMINI_API_KEY")
-	os.Setenv("GEMINI_API_KEY", "")
-	t.Cleanup(func() {
-		os.Setenv("GEMINI_API_KEY", origKey)
-	})
+	t.Setenv("GEMINI_API_KEY", "")
 
 	// Save empty key
 	err := SaveGlobalAPIKey("")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Skip this test in non-interactive environments since it requires user input
 	t.Skip("Skipping interactive test in non-interactive environment")
@@ -205,36 +175,24 @@ func TestEnsureGlobalAPIKey_ConfigFileEmptyKey(t *testing.T) {
 func TestLoadGlobalAPIKey_InvalidJSON(t *testing.T) {
 	mockHome := mockUserHomeDir(t)
 	configPath := filepath.Join(mockHome, ".config", "soi-tro", "config.json")
-	err := os.MkdirAll(filepath.Dir(configPath), 0700)
-	assert.NoError(t, err)
-	err = os.WriteFile(configPath, []byte("invalid json"), 0600)
-	assert.NoError(t, err)
+	err := os.MkdirAll(filepath.Dir(configPath), 0o700)
+	require.NoError(t, err)
+	err = os.WriteFile(configPath, []byte("invalid json"), 0o600)
+	require.NoError(t, err)
 
 	_, err = LoadGlobalAPIKey()
-	assert.Error(t, err)
+	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to parse global config JSON")
 }
 
 func TestGetSchemaPath_Error(t *testing.T) {
-	origHome := os.Getenv("HOME")
-	origUserProfile := os.Getenv("USERPROFILE")
-	origHomeDrive := os.Getenv("HOMEDRIVE")
-	origHomePath := os.Getenv("HOMEPATH")
-
-	os.Setenv("HOME", "")
-	os.Setenv("USERPROFILE", "")
-	os.Setenv("HOMEDRIVE", "")
-	os.Setenv("HOMEPATH", "")
-
-	t.Cleanup(func() {
-		os.Setenv("HOME", origHome)
-		os.Setenv("USERPROFILE", origUserProfile)
-		os.Setenv("HOMEDRIVE", origHomeDrive)
-		os.Setenv("HOMEPATH", origHomePath)
-	})
+	t.Setenv("HOME", "")
+	t.Setenv("USERPROFILE", "")
+	t.Setenv("HOMEDRIVE", "")
+	t.Setenv("HOMEPATH", "")
 
 	_, err := GetSchemaPath()
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestEnsureSchemaFile_Migration(t *testing.T) {
@@ -243,11 +201,11 @@ func TestEnsureSchemaFile_Migration(t *testing.T) {
 
 	schemaPath, err := GetSchemaPath()
 	is.NoError(err)
-	err = os.MkdirAll(filepath.Dir(schemaPath), 0700)
+	err = os.MkdirAll(filepath.Dir(schemaPath), 0o700)
 	is.NoError(err)
 
 	unsignedData := []byte(`{"type": "OBJECT", "properties": {}}`)
-	err = os.WriteFile(schemaPath, unsignedData, 0600)
+	err = os.WriteFile(schemaPath, unsignedData, 0o600)
 	is.NoError(err)
 
 	path, err := EnsureSchemaFile()
@@ -292,10 +250,10 @@ func TestGetAndSaveGlobalModel(t *testing.T) {
 func TestGetGlobalModel_InvalidJSON(t *testing.T) {
 	mockHome := mockUserHomeDir(t)
 	configPath := filepath.Join(mockHome, ".config", "soi-tro", "config.json")
-	err := os.MkdirAll(filepath.Dir(configPath), 0700)
-	assert.NoError(t, err)
-	err = os.WriteFile(configPath, []byte("invalid json"), 0600)
-	assert.NoError(t, err)
+	err := os.MkdirAll(filepath.Dir(configPath), 0o700)
+	require.NoError(t, err)
+	err = os.WriteFile(configPath, []byte("invalid json"), 0o600)
+	require.NoError(t, err)
 
 	// Should return default model on error
 	assert.Equal(t, "gemini-3.1-flash-lite", GetGlobalModel())
@@ -304,7 +262,7 @@ func TestGetGlobalModel_InvalidJSON(t *testing.T) {
 func TestGetGlobalModel_EmptyModel(t *testing.T) {
 	_ = mockUserHomeDir(t)
 	err := SaveGlobalModel("")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Should return default model when empty
 	assert.Equal(t, "gemini-3.1-flash-lite", GetGlobalModel())
@@ -313,7 +271,7 @@ func TestGetGlobalModel_EmptyModel(t *testing.T) {
 func TestGetGlobalModel_WhitespaceModel(t *testing.T) {
 	_ = mockUserHomeDir(t)
 	err := SaveGlobalModel("  ")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Should return default model when whitespace
 	assert.Equal(t, "gemini-3.1-flash-lite", GetGlobalModel())
@@ -322,7 +280,7 @@ func TestGetGlobalModel_WhitespaceModel(t *testing.T) {
 func TestSaveGlobalModel_Whitespace(t *testing.T) {
 	_ = mockUserHomeDir(t)
 	err := SaveGlobalModel("  gemini-3.5-flash  ")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Should trim whitespace
 	assert.Equal(t, "gemini-3.5-flash", GetGlobalModel())
@@ -331,56 +289,32 @@ func TestSaveGlobalModel_Whitespace(t *testing.T) {
 func TestSaveGlobalAPIKey_Whitespace(t *testing.T) {
 	_ = mockUserHomeDir(t)
 	err := SaveGlobalAPIKey("  mock-test-key  ")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Should trim whitespace
 	key, err := LoadGlobalAPIKey()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, "mock-test-key", key)
 }
 
 func TestSaveGlobalAPIKey_GetPathError(t *testing.T) {
-	origHome := os.Getenv("HOME")
-	origUserProfile := os.Getenv("USERPROFILE")
-	origHomeDrive := os.Getenv("HOMEDRIVE")
-	origHomePath := os.Getenv("HOMEPATH")
-
-	os.Setenv("HOME", "")
-	os.Setenv("USERPROFILE", "")
-	os.Setenv("HOMEDRIVE", "")
-	os.Setenv("HOMEPATH", "")
-
-	t.Cleanup(func() {
-		os.Setenv("HOME", origHome)
-		os.Setenv("USERPROFILE", origUserProfile)
-		os.Setenv("HOMEDRIVE", origHomeDrive)
-		os.Setenv("HOMEPATH", origHomePath)
-	})
+	t.Setenv("HOME", "")
+	t.Setenv("USERPROFILE", "")
+	t.Setenv("HOMEDRIVE", "")
+	t.Setenv("HOMEPATH", "")
 
 	err := SaveGlobalAPIKey("test-key")
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestSaveGlobalModel_GetPathError(t *testing.T) {
-	origHome := os.Getenv("HOME")
-	origUserProfile := os.Getenv("USERPROFILE")
-	origHomeDrive := os.Getenv("HOMEDRIVE")
-	origHomePath := os.Getenv("HOMEPATH")
-
-	os.Setenv("HOME", "")
-	os.Setenv("USERPROFILE", "")
-	os.Setenv("HOMEDRIVE", "")
-	os.Setenv("HOMEPATH", "")
-
-	t.Cleanup(func() {
-		os.Setenv("HOME", origHome)
-		os.Setenv("USERPROFILE", origUserProfile)
-		os.Setenv("HOMEDRIVE", origHomeDrive)
-		os.Setenv("HOMEPATH", origHomePath)
-	})
+	t.Setenv("HOME", "")
+	t.Setenv("USERPROFILE", "")
+	t.Setenv("HOMEDRIVE", "")
+	t.Setenv("HOMEPATH", "")
 
 	err := SaveGlobalModel("gemini-3.5-flash")
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestEnsureSchemaFile_CreationError(t *testing.T) {
@@ -389,31 +323,19 @@ func TestEnsureSchemaFile_CreationError(t *testing.T) {
 		t.Skip("Skipping on Windows due to different path handling")
 	}
 
-	origHome := os.Getenv("HOME")
-	origUserProfile := os.Getenv("USERPROFILE")
-	origHomeDrive := os.Getenv("HOMEDRIVE")
-	origHomePath := os.Getenv("HOMEPATH")
-
 	// Set HOME to a path that cannot be created as a directory
-	os.Setenv("HOME", "/nonexistent/path/that/does/not/exist")
-	os.Setenv("USERPROFILE", "/nonexistent/path/that/does/not/exist")
-	os.Setenv("HOMEDRIVE", "")
-	os.Setenv("HOMEPATH", "")
-
-	t.Cleanup(func() {
-		os.Setenv("HOME", origHome)
-		os.Setenv("USERPROFILE", origUserProfile)
-		os.Setenv("HOMEDRIVE", origHomeDrive)
-		os.Setenv("HOMEPATH", origHomePath)
-	})
+	t.Setenv("HOME", "/nonexistent/path/that/does/not/exist")
+	t.Setenv("USERPROFILE", "/nonexistent/path/that/does/not/exist")
+	t.Setenv("HOMEDRIVE", "")
+	t.Setenv("HOMEPATH", "")
 
 	_, err := EnsureSchemaFile()
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestLoadGlobalAPIKey_FileNotExist(t *testing.T) {
 	_ = mockUserHomeDir(t)
 
 	_, err := LoadGlobalAPIKey()
-	assert.Error(t, err)
+	require.Error(t, err)
 }

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDefaultConfig(t *testing.T) {
@@ -31,14 +32,9 @@ func TestDefaultConfig(t *testing.T) {
 
 func TestLoadFromEnv(t *testing.T) {
 	// Set environment variables
-	os.Setenv("LOG_LEVEL", "debug")
-	os.Setenv("LOG_FORMAT", "json")
-	os.Setenv("LOG_CONSOLE", "false")
-	defer func() {
-		os.Unsetenv("LOG_LEVEL")
-		os.Unsetenv("LOG_FORMAT")
-		os.Unsetenv("LOG_CONSOLE")
-	}()
+	t.Setenv("LOG_LEVEL", "debug")
+	t.Setenv("LOG_FORMAT", "json")
+	t.Setenv("LOG_CONSOLE", "false")
 
 	cfg := LoadFromEnv()
 
@@ -114,8 +110,8 @@ func TestInit(t *testing.T) {
 	logPath := filepath.Join(tmpDir, "soi-tro-test.log")
 
 	// Clean up any existing test file
-	os.Remove(logPath)
-	defer os.Remove(logPath)
+	_ = os.Remove(logPath)
+	defer func() { _ = os.Remove(logPath) }()
 
 	cfg := Config{
 		Level:      "debug",
@@ -185,7 +181,7 @@ func TestInit_ErrorCases(t *testing.T) {
 		}
 
 		err := Init(cfg)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid logger configuration")
 		resetLogger()
 	})
@@ -198,7 +194,7 @@ func TestInit_ErrorCases(t *testing.T) {
 		}
 
 		err := Init(cfg)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid logger configuration")
 		resetLogger()
 	})
@@ -211,7 +207,7 @@ func TestInit_ErrorCases(t *testing.T) {
 		}
 
 		err := Init(cfg)
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid logger configuration")
 		resetLogger()
 	})
@@ -224,8 +220,8 @@ func TestInit_DifferentLevels(t *testing.T) {
 	for _, level := range levels {
 		t.Run(level, func(t *testing.T) {
 			logPath := filepath.Join(tmpDir, "soi-tro-test-"+level+".log")
-			os.Remove(logPath)
-			defer os.Remove(logPath)
+			_ = os.Remove(logPath)
+			defer func() { _ = os.Remove(logPath) }()
 
 			cfg := Config{
 				Level:      level,
@@ -235,7 +231,7 @@ func TestInit_DifferentLevels(t *testing.T) {
 			}
 
 			err := Init(cfg)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			Info("test message")
 			resetLogger()
 		})
@@ -249,8 +245,8 @@ func TestInit_DifferentFormats(t *testing.T) {
 	for _, format := range formats {
 		t.Run(format, func(t *testing.T) {
 			logPath := filepath.Join(tmpDir, "soi-tro-test-"+format+".log")
-			os.Remove(logPath)
-			defer os.Remove(logPath)
+			_ = os.Remove(logPath)
+			defer func() { _ = os.Remove(logPath) }()
 
 			cfg := Config{
 				Level:      "info",
@@ -260,7 +256,7 @@ func TestInit_DifferentFormats(t *testing.T) {
 			}
 
 			err := Init(cfg)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			Info("test message")
 			resetLogger()
 		})
@@ -270,8 +266,8 @@ func TestInit_DifferentFormats(t *testing.T) {
 func TestInit_WithConsole(t *testing.T) {
 	tmpDir := os.TempDir()
 	logPath := filepath.Join(tmpDir, "soi-tro-test-console.log")
-	os.Remove(logPath)
-	defer os.Remove(logPath)
+	_ = os.Remove(logPath)
+	defer func() { _ = os.Remove(logPath) }()
 
 	cfg := Config{
 		Level:      "info",
@@ -281,7 +277,7 @@ func TestInit_WithConsole(t *testing.T) {
 	}
 
 	err := Init(cfg)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	Info("test message")
 	resetLogger()
 }
@@ -289,8 +285,8 @@ func TestInit_WithConsole(t *testing.T) {
 func TestInit_WithConsoleJSON(t *testing.T) {
 	tmpDir := os.TempDir()
 	logPath := filepath.Join(tmpDir, "soi-tro-test-console-json.log")
-	os.Remove(logPath)
-	defer os.Remove(logPath)
+	_ = os.Remove(logPath)
+	defer func() { _ = os.Remove(logPath) }()
 
 	cfg := Config{
 		Level:      "info",
@@ -300,7 +296,7 @@ func TestInit_WithConsoleJSON(t *testing.T) {
 	}
 
 	err := Init(cfg)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	Info("test message")
 	resetLogger()
 }
@@ -324,8 +320,8 @@ func TestInit_InvalidDirectory(t *testing.T) {
 func TestLoggingFunctions(t *testing.T) {
 	tmpDir := os.TempDir()
 	logPath := filepath.Join(tmpDir, "soi-tro-test-functions.log")
-	os.Remove(logPath)
-	defer os.Remove(logPath)
+	_ = os.Remove(logPath)
+	defer func() { _ = os.Remove(logPath) }()
 
 	cfg := Config{
 		Level:      "debug",
@@ -335,7 +331,7 @@ func TestLoggingFunctions(t *testing.T) {
 	}
 
 	err := Init(cfg)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Test all logging functions
 	Debug("debug message", "key", "value")
@@ -359,8 +355,8 @@ func TestGet_Fallback(t *testing.T) {
 func TestWith(t *testing.T) {
 	tmpDir := os.TempDir()
 	logPath := filepath.Join(tmpDir, "soi-tro-test-with.log")
-	os.Remove(logPath)
-	defer os.Remove(logPath)
+	_ = os.Remove(logPath)
+	defer func() { _ = os.Remove(logPath) }()
 
 	cfg := Config{
 		Level:      "info",
@@ -370,7 +366,7 @@ func TestWith(t *testing.T) {
 	}
 
 	err := Init(cfg)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	logger := With("custom_key", "custom_value")
 	assert.NotNil(t, logger)
@@ -382,8 +378,8 @@ func TestWith(t *testing.T) {
 func TestInit_DefaultLevel(t *testing.T) {
 	tmpDir := os.TempDir()
 	logPath := filepath.Join(tmpDir, "soi-tro-test-default-level.log")
-	os.Remove(logPath)
-	defer os.Remove(logPath)
+	_ = os.Remove(logPath)
+	defer func() { _ = os.Remove(logPath) }()
 
 	cfg := Config{
 		Level:      "info", // Valid level
@@ -393,7 +389,7 @@ func TestInit_DefaultLevel(t *testing.T) {
 	}
 
 	err := Init(cfg)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Test that the logger was initialized correctly
 	logger := Get()
@@ -406,8 +402,8 @@ func TestInit_DefaultLevel(t *testing.T) {
 func TestInit_WithWhitespaceLevel(t *testing.T) {
 	tmpDir := os.TempDir()
 	logPath := filepath.Join(tmpDir, "soi-tro-test-whitespace.log")
-	os.Remove(logPath)
-	defer os.Remove(logPath)
+	_ = os.Remove(logPath)
+	defer func() { _ = os.Remove(logPath) }()
 
 	cfg := Config{
 		Level:      " info ", // Should fail validation
@@ -417,7 +413,7 @@ func TestInit_WithWhitespaceLevel(t *testing.T) {
 	}
 
 	err := Init(cfg)
-	assert.Error(t, err)
+	require.Error(t, err)
 	resetLogger()
 }
 

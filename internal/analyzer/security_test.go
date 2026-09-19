@@ -3,7 +3,6 @@ package analyzer
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -75,7 +74,8 @@ func TestSecurityIntegrity(t *testing.T) {
 		is.NoError(err)
 
 		// Alter one byte of the signature string
-		sigStr := unified[signatureKey].(string)
+		sigStr, ok := unified[signatureKey].(string)
+		is.True(ok)
 		alteredSig := sigStr[:len(sigStr)-1] + "x"
 		unified[signatureKey] = alteredSig
 
@@ -100,7 +100,8 @@ func TestSecurityIntegrity(t *testing.T) {
 		err = json.Unmarshal(signedBytes, &unified)
 		is.NoError(err)
 
-		properties := unified["properties"].(map[string]any)
+		properties, ok := unified["properties"].(map[string]any)
+		is.True(ok)
 		properties["deposit"] = map[string]any{
 			"type":  "string",
 			"title": "Tiền cọc",
@@ -139,7 +140,7 @@ func TestSecurityIntegrity(t *testing.T) {
 		// Corrupt bytes
 		err := VerifySchema([]byte("{corrupted-json...}"))
 		is.Error(err, "VerifySchema must return parsing error on malformed JSON")
-		is.True(strings.Contains(err.Error(), "unmarshal"), "expected unmarshal parsing error, got %q", err.Error())
+		is.Contains(err.Error(), "unmarshal", "expected unmarshal parsing error, got %q", err.Error())
 	})
 
 	t.Run("format variations (whitespace immune)", func(t *testing.T) {
@@ -177,7 +178,8 @@ func TestSecurityIntegrity(t *testing.T) {
 		is.NoError(err)
 
 		// Get the signature value
-		sigStr := unified[signatureKey].(string)
+		sigStr, ok := unified[signatureKey].(string)
+		is.True(ok)
 
 		// 2. Create custom JSON manually with completely different key order
 		// Here signature Key is placed FIRST, and x_required_fields is LAST.
@@ -214,7 +216,7 @@ func TestSecurityIntegrity(t *testing.T) {
 		}
 
 		for _, tc := range testCases {
-			t.Run(tc.name, func(t *testing.T) {
+			t.Run(tc.name, func(_ *testing.T) {
 				var unified map[string]any
 				err := json.Unmarshal([]byte(baseJSON), &unified)
 				is.NoError(err)

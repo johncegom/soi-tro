@@ -1,12 +1,14 @@
 package ui
 
 import (
+	"errors"
 	"fmt"
+	"soi-tro/internal/database"
 
 	"github.com/charmbracelet/huh"
-	"soi-tro/internal/database"
 )
 
+// ShowHistoryAndCompareMenu runs the history submenu until the user goes back.
 func ShowHistoryAndCompareMenu() error {
 	for {
 		var choice string
@@ -18,7 +20,7 @@ func ShowHistoryAndCompareMenu() error {
 						huh.NewOption("1. So sánh song song (2-3 phòng)", "compare"),
 						huh.NewOption("2. Xem danh sách lịch sử", "list"),
 						huh.NewOption("3. Xóa một phòng trọ khỏi lịch sử", "delete"),
-						huh.NewOption("4. Quay lại menu chính", "back"),
+						huh.NewOption("4. Quay lại menu chính", backChoice),
 					).
 					Value(&choice),
 			),
@@ -28,7 +30,7 @@ func ShowHistoryAndCompareMenu() error {
 		if err != nil {
 			return err
 		}
-		if backPressed || choice == "back" {
+		if backPressed || choice == backChoice {
 			return nil
 		}
 
@@ -49,6 +51,7 @@ func ShowHistoryAndCompareMenu() error {
 	}
 }
 
+// CompareRentalsUI lets the user pick 2-3 saved rentals and renders them side by side.
 func CompareRentalsUI() error {
 	records, err := database.ListRentals()
 	if err != nil {
@@ -74,7 +77,7 @@ func CompareRentalsUI() error {
 				Value(&selectedIDs).
 				Validate(func(val []int64) error {
 					if len(val) < 2 || len(val) > 3 {
-						return fmt.Errorf("Vui lòng chọn chính xác từ 2 đến 3 phòng")
+						return errors.New("vui lòng chọn chính xác từ 2 đến 3 phòng")
 					}
 					return nil
 				}),
@@ -103,6 +106,7 @@ func CompareRentalsUI() error {
 	return nil
 }
 
+// ListRentalsUI prints every saved rental.
 func ListRentalsUI() error {
 	records, err := database.ListRentals()
 	if err != nil {
@@ -129,6 +133,7 @@ func ListRentalsUI() error {
 	return nil
 }
 
+// DeleteRentalUI lets the user delete one saved rental.
 func DeleteRentalUI() error {
 	records, err := database.ListRentals()
 	if err != nil {

@@ -133,3 +133,24 @@ remaining keys sorted) and use it at all three sites; see
 fields first and sorts the rest; `RenderResults`, `RenderComparisonTable` and
 `listFields` use it. Regression coverage: `TestOrderedKeys_StandardFirstThenSortedCustom`
 (50 repeated calls with five custom keys), written test-first.
+
+## BUG-006: Choosing "Change" after an analysis error falls through instead of re-prompting
+
+**Symptom:** After an image-read or Gemini error, picking "Chọn ảnh khác / Nhập
+văn bản khác (Change)" does not return to the input form. Execution continues
+with the failed state: after a Gemini error `result` is nil and is passed to
+`ui.RenderResults`, which dereferences it (nil-pointer panic); after an image
+read error the analysis proceeds with no image bytes.
+
+**Root cause:** `case "change": break // break inner loop` in `runAnalyze`
+(`cmd/main.go`, formerly inline in `main`) breaks only the `switch`, not the
+inner `for`. Found while extracting `runAnalyze` in task 017; the extraction
+kept the behavior unchanged.
+
+**Reachability:** Main menu, "Phân tích tin đăng mới", trigger any Gemini or
+image-read error, choose option 2 in `ui.PromptErrorRetry`.
+
+**Options:** Label the inner loop and `continue analyzeLoop` on "change".
+Regression test needs the loop's retry decision extracted into a pure function.
+
+**Status:** pending decision

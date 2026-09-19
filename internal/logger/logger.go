@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -25,7 +26,7 @@ func Init(cfg Config) error {
 	var initErr error
 	once.Do(func() {
 		if !cfg.IsValid() {
-			initErr = fmt.Errorf("invalid logger configuration")
+			initErr = errors.New("invalid logger configuration")
 			return
 		}
 
@@ -63,22 +64,16 @@ func Init(cfg Config) error {
 			Level: level,
 		}
 
-		// Create multi-writer handler if console output is enabled
+		// Also mirror to console when enabled
+		var w io.Writer = logFile
 		if cfg.Console {
-			// Use io.MultiWriter to write to both file and console
-			multiWriter := io.MultiWriter(logFile, os.Stdout)
-			if cfg.Format == "json" {
-				globalLogger = slog.New(slog.NewJSONHandler(multiWriter, opts))
-			} else {
-				globalLogger = slog.New(slog.NewTextHandler(multiWriter, opts))
-			}
+			w = io.MultiWriter(logFile, os.Stdout)
+		}
+
+		if cfg.Format == "json" {
+			globalLogger = slog.New(slog.NewJSONHandler(w, opts))
 		} else {
-			// Create file handler only
-			if cfg.Format == "json" {
-				globalLogger = slog.New(slog.NewJSONHandler(logFile, opts))
-			} else {
-				globalLogger = slog.New(slog.NewTextHandler(logFile, opts))
-			}
+			globalLogger = slog.New(slog.NewTextHandler(w, opts))
 		}
 	})
 

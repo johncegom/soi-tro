@@ -1,3 +1,4 @@
+// Package analyzer loads the schema and global config and checks rental posts against them.
 package analyzer
 
 import (
@@ -32,16 +33,20 @@ func LoadConfig(filePath string) (*Config, error) {
 
 // SaveConfig writes the configuration back to a JSON file path
 func SaveConfig(filePath string, config *Config) error {
-	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
+	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
 		return fmt.Errorf("failed to open config file for writing: %w", err)
 	}
-	defer file.Close()
 
 	encoder := json.NewEncoder(file)
 	encoder.SetIndent("", "  ")
 	if err := encoder.Encode(config); err != nil {
+		_ = file.Close()
 		return fmt.Errorf("failed to encode config JSON: %w", err)
+	}
+
+	if err := file.Close(); err != nil {
+		return fmt.Errorf("failed to close config file: %w", err)
 	}
 
 	return nil

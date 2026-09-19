@@ -1,7 +1,9 @@
+// Command release tags the next semantic version and pushes it to origin.
 package main
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -11,7 +13,7 @@ import (
 )
 
 func runCmd(name string, args ...string) (string, error) {
-	cmd := exec.Command(name, args...)
+	cmd := exec.CommandContext(context.Background(), name, args...) // #nosec G204 -- args are literals from this script.
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
@@ -20,6 +22,42 @@ func runCmd(name string, args ...string) (string, error) {
 		return "", fmt.Errorf("%s %v failed: %w (stderr: %s)", name, args, err, stderr.String())
 	}
 	return strings.TrimSpace(stdout.String()), nil
+}
+
+// nextVersion bumps latestTag (vX.Y.Z) by patch, or by os.Args[1] = "major" | "minor".
+func nextVersion(latestTag string) string {
+	// Parse latest tag (expecting format vX.Y.Z)
+	re := regexp.MustCompile(`^v?(\d+)\.(\d+)\.(\d+)$`)
+	matches := re.FindStringSubmatch(latestTag)
+	if len(matches) != 4 {
+		fmt.Printf("Latest tag %q does not match semantic versioning format (vX.Y.Z). Defaulting next tag to v0.1.0\n", latestTag)
+		return "v0.1.0"
+	}
+	major, _ := strconv.Atoi(matches[1])
+	minor, _ := strconv.Atoi(matches[2])
+	patch, _ := strconv.Atoi(matches[3])
+
+	// Check CLI arguments for minor or major version bump
+	bump := "patch"
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "major":
+			bump = "major"
+			major++
+			minor = 0
+			patch = 0
+		case "minor":
+			bump = "minor"
+			minor++
+			patch = 0
+		}
+	}
+	if bump == "patch" {
+		patch++
+	}
+	nextTag := fmt.Sprintf("v%d.%d.%d", major, minor, patch)
+	fmt.Printf("Latest tag: %s. Bumping %s version to: %s\n", latestTag, bump, nextTag)
+	return nextTag
 }
 
 func main() {
@@ -31,38 +69,7 @@ func main() {
 		nextTag = "v0.1.0"
 		fmt.Printf("No previous tag found. Starting with %s\n", nextTag)
 	} else {
-		// Parse latest tag (expecting format vX.Y.Z)
-		re := regexp.MustCompile(`^v?(\d+)\.(\d+)\.(\d+)$`)
-		matches := re.FindStringSubmatch(latestTag)
-		if len(matches) != 4 {
-			fmt.Printf("Latest tag %q does not match semantic versioning format (vX.Y.Z). Defaulting next tag to v0.1.0\n", latestTag)
-			nextTag = "v0.1.0"
-		} else {
-			major, _ := strconv.Atoi(matches[1])
-			minor, _ := strconv.Atoi(matches[2])
-			patch, _ := strconv.Atoi(matches[3])
-
-			// Check CLI arguments for minor or major version bump
-			bump := "patch"
-			if len(os.Args) > 1 {
-				switch os.Args[1] {
-				case "major":
-					bump = "major"
-					major++
-					minor = 0
-					patch = 0
-				case "minor":
-					bump = "minor"
-					minor++
-					patch = 0
-				}
-			}
-			if bump == "patch" {
-				patch++
-			}
-			nextTag = fmt.Sprintf("v%d.%d.%d", major, minor, patch)
-			fmt.Printf("Latest tag: %s. Bumping %s version to: %s\n", latestTag, bump, nextTag)
-		}
+		nextTag = nextVersion(latestTag)
 	}
 
 	// 2. Create the tag locally

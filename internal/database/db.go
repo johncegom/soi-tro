@@ -1,3 +1,4 @@
+// Package database persists analyzed rentals in a local SQLite file.
 package database
 
 import (
@@ -12,11 +13,13 @@ import (
 	"soi-tro/internal/priceparser"
 	"time"
 
-	_ "modernc.org/sqlite"
+	_ "modernc.org/sqlite" // registers the "sqlite" driver
 )
 
+// DB is the process-wide connection opened by InitDB.
 var DB *sql.DB
 
+// RentalRecord is one analyzed rental as stored in SQLite.
 type RentalRecord struct {
 	ID        int64
 	CreatedAt string
@@ -26,6 +29,7 @@ type RentalRecord struct {
 	Result   *gemini.RentalExtractionResult
 }
 
+// GetDBPath returns the SQLite file path under the user's config dir.
 func GetDBPath() (string, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -198,7 +202,7 @@ func ListRentals() (records []RentalRecord, err error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	for rows.Next() {
 		var rec RentalRecord

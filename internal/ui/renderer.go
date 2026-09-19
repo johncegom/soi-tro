@@ -3,22 +3,28 @@ package ui
 import (
 	"fmt"
 	"os"
+	"slices"
+	"soi-tro/internal/analyzer"
+	"soi-tro/internal/database"
+	"soi-tro/internal/gemini"
 	"strings"
 
 	"github.com/atotto/clipboard"
 	"github.com/olekukonko/tablewriter"
 	"google.golang.org/genai"
-	"soi-tro/internal/analyzer"
-	"soi-tro/internal/database"
-	"soi-tro/internal/gemini"
 )
 
+// notMentioned is the sentinel Gemini returns for absent fields.
+const notMentioned = "Không đề cập"
+
 // RenderResults displays the extraction results and configuration compliance status in the terminal.
+//
+//nolint:gocyclo,funlen // one branch per rental field; a table-driven rewrite is cosmetic until a field has a bug.
 func RenderResults(result *gemini.RentalExtractionResult, config *analyzer.Config) {
 	fmt.Println("\n=========================================================================")
 	fmt.Println("                 KẾT QUẢ PHÂN TÍCH TIN ĐĂNG THUÊ PHÒNG                   ")
 	fmt.Println("=========================================================================")
-	if result.PhoneNumber != "" && result.PhoneNumber != "Không đề cập" {
+	if result.PhoneNumber != "" && result.PhoneNumber != notMentioned {
 		fmt.Printf("📞 LIÊN HỆ CHỦ NHÀ: %s\n", result.PhoneNumber)
 	} else {
 		fmt.Println("📞 LIÊN HỆ CHỦ NHÀ: Không đề cập")
@@ -72,13 +78,7 @@ func RenderResults(result *gemini.RentalExtractionResult, config *analyzer.Confi
 	}
 
 	for _, field := range fields {
-		isRequired := false
-		for _, req := range config.RequiredFields {
-			if req == field.key {
-				isRequired = true
-				break
-			}
-		}
+		isRequired := slices.Contains(config.RequiredFields, field.key)
 
 		reqStr := "Không"
 		if isRequired {
@@ -101,7 +101,7 @@ func RenderResults(result *gemini.RentalExtractionResult, config *analyzer.Confi
 
 	// Print Additional Notes
 	fmt.Println("\n📝 GHI CHÚ THÊM:")
-	if result.AdditionalNotes != "" && result.AdditionalNotes != "Không đề cập" {
+	if result.AdditionalNotes != "" && result.AdditionalNotes != notMentioned {
 		fmt.Printf("  - %s\n", result.AdditionalNotes)
 	} else {
 		fmt.Println("  - Không có ghi chú thêm.")
@@ -134,17 +134,16 @@ func RenderResults(result *gemini.RentalExtractionResult, config *analyzer.Confi
 	}
 
 	// Copy phone number or polite message to system clipboard automatically
-	hasPhone := result.PhoneNumber != "" && result.PhoneNumber != "Không đề cập"
-	if hasPhone {
-		err := clipboard.WriteAll(result.PhoneNumber)
-		if err != nil {
+	hasPhone := result.PhoneNumber != "" && result.PhoneNumber != notMentioned
+	switch {
+	case hasPhone:
+		if err := clipboard.WriteAll(result.PhoneNumber); err != nil {
 			fmt.Printf("\n⚠️  Không thể tự động sao chép số điện thoại vào clipboard: %v\n", err)
 		} else {
 			fmt.Printf("\n📋 [OK]: Đã tự động sao chép số điện thoại '%s' vào clipboard của bạn để tiện liên hệ!\n", result.PhoneNumber)
 		}
-	} else if politeMessage != "" {
-		err := clipboard.WriteAll(politeMessage)
-		if err != nil {
+	case politeMessage != "":
+		if err := clipboard.WriteAll(politeMessage); err != nil {
 			fmt.Printf("\n⚠️  Không thể tự động sao chép tin nhắn vào clipboard: %v\n", err)
 		} else {
 			fmt.Println("\n📋 [OK]: Đã tự động sao chép tin nhắn phong cách 'Lịch sự' vào clipboard của bạn!")
@@ -155,6 +154,8 @@ func RenderResults(result *gemini.RentalExtractionResult, config *analyzer.Confi
 }
 
 // RenderComparisonTable displays 2 or 3 rental records side by side in a formatted table
+//
+//nolint:gocyclo // same shape as RenderResults, one branch per compared field.
 func RenderComparisonTable(records []database.RentalRecord) {
 	fmt.Println("\n=========================================================================")
 	fmt.Println("                       SO SÁNH PHÒNG TRỌ SONG SONG                       ")
@@ -214,7 +215,7 @@ func RenderComparisonTable(records []database.RentalRecord) {
 	for _, rec := range records {
 		phone := rec.Result.PhoneNumber
 		if phone == "" {
-			phone = "Không đề cập"
+			phone = notMentioned
 		}
 		rowPhone = append(rowPhone, phone)
 	}
@@ -225,7 +226,7 @@ func RenderComparisonTable(records []database.RentalRecord) {
 		for _, rec := range records {
 			val := rec.Result.RawFields[field.key]
 			if val == "" {
-				val = "Không đề cập"
+				val = notMentioned
 			}
 			row = append(row, val)
 		}
@@ -255,7 +256,7 @@ func RenderComparisonTable(records []database.RentalRecord) {
 	rowNotes := []string{"Ghi chú thêm"}
 	for _, rec := range records {
 		notes := rec.Result.AdditionalNotes
-		if notes == "" || notes == "Không đề cập" {
+		if notes == "" || notes == notMentioned {
 			notes = "-"
 		}
 		rowNotes = append(rowNotes, notes)

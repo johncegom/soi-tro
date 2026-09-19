@@ -6,6 +6,7 @@ Append one single-line row per event at the end of the matching table. Use `—`
 
 | Date | Branch | Question | Prior leaning | Answer | Taken | Tool | Requested | Reported | Status |
 |---|---|---|---|---|---|---|---|---|---|
+| 2026-09-20 | chore/lint-security-phase2 | Task 017 item 3.1: shape of `run` extraction from `main` (keep DoD signature, handlers struct, or enum dispatch?) | `handlers` struct of func fields + `dispatch`, untested `runAnalyze` | Drop the struct; test `dispatch(choice) action` enum + `mimeTypeFor`; do not thread stdin/stdout; extract `runAnalyze` verbatim in this task; record signature change as a deviation | Partly: struct dropped, rest taken | Agent | opus | claude-opus-5 | OK |
 
 ## Binding changes
 
