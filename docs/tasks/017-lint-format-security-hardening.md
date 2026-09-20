@@ -66,7 +66,7 @@ Phase 3, test what matters:
 - Manual:
   - Phase 0: `git status` after renormalize shows only line-ending changes; `file cmd/main.go` reports no CRLF.
   - Phase 1: run the app once, confirm `~/.config/soi-tro/` log file is `-rw-------` on Unix; confirm an existing signed `schema.json` still loads.
-  - Phase 2: open a PR with a deliberate `errcheck` violation and confirm the Lint job fails.
+  - Phase 2: open a PR with a deliberate `errcheck` violation and confirm the Lint job fails. Done 2026-09-20: draft PR #32 (closed unmerged) failed Lint on `Error return value of os.Remove is not checked (errcheck)`, run 35468022472; all other checks passed.
 
 ## Sub-tasks
 
