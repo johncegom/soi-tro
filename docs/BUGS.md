@@ -153,4 +153,28 @@ image-read error, choose option 2 in `ui.PromptErrorRetry`.
 **Options:** Label the inner loop and `continue analyzeLoop` on "change".
 Regression test needs the loop's retry decision extracted into a pure function.
 
+**Status:** fixed: `onAnalysisError` (`cmd/dispatch.go`) maps the retry choice
+to `stepRetry` / `stepChangeInput` / `stepMenu`, and both error sites in
+`runAnalyze` now `continue analyzeLoop` on `stepChangeInput`. Regression
+coverage: `TestOnAnalysisError`, written test-first. Not covered: the loop
+wiring in `runAnalyze` itself (interactive forms plus a live Gemini client).
+
+## BUG-007: "Analyze another listing" re-analyzes the same listing
+
+**Symptom:** After a successful analysis, choosing "Tiếp tục phân tích tin
+đăng khác" does not show the input form. The same listing is sent to Gemini
+again and saved to history a second time.
+
+**Root cause:** `case "new": goto nextInput` in `runAnalyze` (`cmd/main.go`)
+jumps to the end of the inner retry loop's body, so the inner loop starts
+another iteration with the same `inputRes`. This is the same kind of mistake
+as BUG-006: the code continues the wrong loop.
+
+**Reachability:** Main menu, "Phân tích tin đăng mới", complete any successful
+analysis, choose "Tiếp tục phân tích tin đăng khác" in `ui.PromptAfterSuccess`.
+
+**Options:** Replace `goto nextInput` with `continue analyzeLoop` and drop the
+label; a pure mapping for the post-success choice (like `onAnalysisError`)
+gives regression coverage.
+
 **Status:** pending decision
