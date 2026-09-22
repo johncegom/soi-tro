@@ -54,6 +54,26 @@ func onAnalysisError(choice string) errorStep {
 	}
 }
 
+type successStep int
+
+const (
+	stepExport successStep = iota
+	stepNewInput
+	stepBackToMenu
+)
+
+// onAnalysisSuccess maps a PromptAfterSuccess value to the next step of the analyze loop.
+func onAnalysisSuccess(choice string) successStep {
+	switch choice {
+	case "export":
+		return stepExport
+	case "new":
+		return stepNewInput
+	default:
+		return stepBackToMenu
+	}
+}
+
 // mimeTypeFor returns the image MIME type for a file path, defaulting to JPEG.
 func mimeTypeFor(path string) string {
 	switch strings.ToLower(filepath.Ext(path)) {
