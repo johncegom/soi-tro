@@ -41,6 +41,22 @@ func TestOnAnalysisError(t *testing.T) {
 	}
 }
 
+// BUG-007: "new" must go back to the input form, not re-analyze the same listing.
+func TestOnAnalysisSuccess(t *testing.T) {
+	tests := []struct {
+		choice string
+		want   successStep
+	}{
+		{"export", stepExport},
+		{"new", stepNewInput},
+		{"back", stepBackToMenu},
+		{"", stepBackToMenu},
+	}
+	for _, tt := range tests {
+		assert.Equal(t, tt.want, onAnalysisSuccess(tt.choice), "choice %q", tt.choice)
+	}
+}
+
 func TestMimeTypeFor(t *testing.T) {
 	tests := map[string]string{
 		"a.png":        "image/png",

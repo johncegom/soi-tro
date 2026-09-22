@@ -177,4 +177,8 @@ analysis, choose "Tiếp tục phân tích tin đăng khác" in `ui.PromptAfterS
 label; a pure mapping for the post-success choice (like `onAnalysisError`)
 gives regression coverage.
 
-**Status:** pending decision
+**Status:** fixed: `onAnalysisSuccess` (`cmd/dispatch.go`) maps the
+post-success choice to a typed `successStep`; `runAnalyze` (`cmd/main.go`)
+uses `continue analyzeLoop` for `stepNewInput` instead of `goto nextInput`,
+so it prompts for new input instead of re-running the same `inputRes`.
+Regression coverage: `TestOnAnalysisSuccess` (`cmd/dispatch_test.go`).

@@ -243,8 +243,8 @@ analyzeLoop:
 			exportDone := false
 			for {
 				nextChoice := ui.PromptAfterSuccess(exportConfigured, exportDone)
-				switch nextChoice {
-				case "export":
+				switch onAnalysisSuccess(nextChoice) {
+				case stepExport:
 					if writeErr := exporter.WriteResult(writeCfg, result, titleMap); writeErr != nil {
 						fmt.Printf("⚠️  Không thể xuất kết quả: %v\n", writeErr)
 					} else if filePath, pathErr := exporter.ActiveFilePath(writeCfg); pathErr == nil {
@@ -252,13 +252,12 @@ analyzeLoop:
 						exportDone = true
 					}
 					// Stay in the loop so the user can pick another action.
-				case "new":
-					goto nextInput
-				default: // "back"
+				case stepNewInput:
+					continue analyzeLoop // prompt for input again
+				default: // stepBackToMenu
 					break analyzeLoop
 				}
 			}
-		nextInput:
 		}
 	}
 	return nil
