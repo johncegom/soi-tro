@@ -164,9 +164,9 @@ list; do not guess your vendor). Use the row for `role` + your tool with
 `status=ok`. Never run Advise or Dream on your own model or an unknown one.
 
 <!-- eagd-bindings:start -->
-eagd-binding: role=advise tool=Agent model=opus status=ok probed=2026-09-18 reported=claude-opus-5
+eagd-binding: role=advise tool=Agent model=opus status=ok probed=2026-09-23 reported=claude-opus-5-5
 eagd-binding: role=grade tool=Agent model=haiku status=ok probed=2026-09-18 reported=claude-haiku-4-5-20251001
-eagd-binding: role=dream tool=Agent model=opus status=ok probed=2026-09-18 reported=claude-opus-5
+eagd-binding: role=dream tool=Agent model=opus status=ok probed=2026-09-23 reported=claude-opus-5-5
 eagd-binding: role=advise tool=spawn_agent model=gpt-5.6-sol effort=high retry_model=gpt-6-astra retry_effort=medium status=unverified
 eagd-binding: role=grade tool=spawn_agent model=gpt-5.6-luna effort=high status=unverified
 eagd-binding: role=dream tool=spawn_agent model=gpt-6-astra effort=medium status=unverified

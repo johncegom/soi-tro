@@ -15,6 +15,8 @@ Append one single-line row per event at the end of the matching table. Use `—`
 | 2026-09-18 | advise | Agent | — | opus (ok) | initial install, probe reported claude-opus-5 |
 | 2026-09-18 | grade | Agent | — | haiku (ok) | initial install, probe reported claude-haiku-4-5-20251001 |
 | 2026-09-18 | dream | Agent | — | opus (ok) | initial install, same model as advise, covered by the opus probe (claude-opus-5) |
+| 2026-09-23 | advise | Agent | opus (ok, reported claude-opus-5) | opus (ok, reported claude-opus-5-5) | re-probe on /bootstrap-eagd-pattern re-run, underlying opus version upgraded |
+| 2026-09-23 | dream | Agent | opus (ok, reported claude-opus-5) | opus (ok, reported claude-opus-5-5) | re-probe on /bootstrap-eagd-pattern re-run, underlying opus version upgraded |
 
 ## Grade fallbacks
 
