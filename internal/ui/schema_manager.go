@@ -13,7 +13,6 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/huh"
-	"github.com/olekukonko/tablewriter"
 	"google.golang.org/genai"
 )
 
@@ -88,11 +87,8 @@ func listFields() error {
 	fmt.Println("                  DANH SÁCH CÁC TRƯỜNG THÔNG TIN HIỆN TẠI                ")
 	fmt.Println("=========================================================================")
 
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Mã trường (Key)", "Tiêu đề (Title)", "Yêu cầu", "Kiểu dữ liệu", "Mô tả"})
-	table.SetAutoWrapText(true)
-	table.SetRowLine(true)
-	table.SetColWidth(25)
+	table := newResultsTable(25)
+	table.Header([]string{"Mã trường (Key)", "Tiêu đề (Title)", "Yêu cầu", "Kiểu dữ liệu", "Mô tả"})
 
 	standardKeys := schemaListKeys
 
@@ -108,14 +104,16 @@ func listFields() error {
 			title = "-"
 		}
 
-		table.Append([]string{k, title, req, string(prop.Type), prop.Description})
+		appendRow(table, []string{k, title, req, string(prop.Type), prop.Description})
 	}
 
 	for _, k := range orderedKeys(schema.Properties, standardKeys) {
 		printRow(k, schema.Properties[k])
 	}
 
-	table.Render()
+	if err := table.Render(); err != nil {
+		fmt.Printf("⚠️  Lỗi khi hiển thị bảng: %v\n", err)
+	}
 
 	fmt.Print("\nNhấn Enter để quay lại menu quản lý...")
 	var dummy string
