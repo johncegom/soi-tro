@@ -176,11 +176,11 @@ analyzeLoop:
 				if err != nil {
 					logger.FromContext(analysisCtx).Error("image read failed", "operation", "input.read_image", "error", "read_image")
 					fmt.Printf("❌ Lỗi khi đọc file hình ảnh: %v\n", err)
-					switch ui.PromptErrorRetry(inputRes.Type) {
-					case "retry":
+					switch onAnalysisError(ui.PromptErrorRetry(inputRes.Type)) {
+					case stepRetry:
 						continue
-					case "change":
-						break // break inner loop to prompt for input again
+					case stepChangeInput:
+						continue analyzeLoop // prompt for input again
 					default:
 						break analyzeLoop // back to main menu
 					}
@@ -195,11 +195,11 @@ analyzeLoop:
 			result, err := client.ExtractRentalInfo(analysisCtx, inputRes.Text, imageBytes, mimeType, cfg.RequiredFields)
 			if err != nil {
 				fmt.Printf("\n❌ Lỗi phân tích tin đăng qua Gemini API: %v\n", err)
-				switch ui.PromptErrorRetry(inputRes.Type) {
-				case "retry":
+				switch onAnalysisError(ui.PromptErrorRetry(inputRes.Type)) {
+				case stepRetry:
 					continue
-				case "change":
-					break // break inner loop to prompt for input again
+				case stepChangeInput:
+					continue analyzeLoop // prompt for input again
 				default:
 					break analyzeLoop // back to main menu
 				}

@@ -34,6 +34,26 @@ func dispatch(choice string) action {
 	}
 }
 
+type errorStep int
+
+const (
+	stepRetry errorStep = iota
+	stepChangeInput
+	stepMenu
+)
+
+// onAnalysisError maps a PromptErrorRetry value to the next step of the analyze loop.
+func onAnalysisError(choice string) errorStep {
+	switch choice {
+	case "retry":
+		return stepRetry
+	case "change":
+		return stepChangeInput
+	default:
+		return stepMenu
+	}
+}
+
 // mimeTypeFor returns the image MIME type for a file path, defaulting to JPEG.
 func mimeTypeFor(path string) string {
 	switch strings.ToLower(filepath.Ext(path)) {

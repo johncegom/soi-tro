@@ -25,6 +25,22 @@ func TestDispatch(t *testing.T) {
 	}
 }
 
+// BUG-006: "change" must go back to the input form, not fall through.
+func TestOnAnalysisError(t *testing.T) {
+	tests := []struct {
+		choice string
+		want   errorStep
+	}{
+		{"retry", stepRetry},
+		{"change", stepChangeInput},
+		{"back", stepMenu},
+		{"", stepMenu},
+	}
+	for _, tt := range tests {
+		assert.Equal(t, tt.want, onAnalysisError(tt.choice), "choice %q", tt.choice)
+	}
+}
+
 func TestMimeTypeFor(t *testing.T) {
 	tests := map[string]string{
 		"a.png":        "image/png",
