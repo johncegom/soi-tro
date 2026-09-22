@@ -11,11 +11,34 @@ import (
 
 	"github.com/atotto/clipboard"
 	"github.com/olekukonko/tablewriter"
+	"github.com/olekukonko/tablewriter/tw"
 	"google.golang.org/genai"
 )
 
 // notMentioned is the sentinel Gemini returns for absent fields.
 const notMentioned = "Không đề cập"
+
+// newResultsTable builds a table matching the pre-v1 tablewriter defaults:
+// raw (non-title-cased) headers, word-wrapped cells, a line between every
+// row, and a max content width per column.
+func newResultsTable(colWidth int) *tablewriter.Table {
+	return tablewriter.NewTable(os.Stdout,
+		tablewriter.WithHeaderAutoFormat(tw.Off),
+		tablewriter.WithRowAutoWrap(tw.WrapNormal),
+		tablewriter.WithRowMaxWidth(colWidth),
+		tablewriter.WithRendition(tw.Rendition{
+			Settings: tw.Settings{Separators: tw.Separators{BetweenRows: tw.On}},
+		}),
+	)
+}
+
+// appendRow appends a row and reports any error, since Table.Append now
+// returns one instead of silently failing.
+func appendRow(table *tablewriter.Table, row []string) {
+	if err := table.Append(row); err != nil {
+		fmt.Printf("⚠️  Lỗi khi thêm dòng vào bảng: %v\n", err)
+	}
+}
 
 // RenderResults displays the extraction results and configuration compliance status in the terminal.
 //
@@ -32,11 +55,8 @@ func RenderResults(result *gemini.RentalExtractionResult, config *analyzer.Confi
 	fmt.Println("=========================================================================")
 
 	// Setup table writer
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Thuộc Tính", "Giá Trị Trích Xuất", "Yêu Cầu", "Trạng Thái"})
-	table.SetAutoWrapText(true)
-	table.SetRowLine(true)
-	table.SetColWidth(35)
+	table := newResultsTable(35)
+	table.Header([]string{"Thuộc Tính", "Giá Trị Trích Xuất", "Yêu Cầu", "Trạng Thái"})
 
 	// Load schema to get properties dynamically
 	schemaPath, err := analyzer.GetSchemaPath()
@@ -94,10 +114,12 @@ func RenderResults(result *gemini.RentalExtractionResult, config *analyzer.Confi
 		}
 
 		row := []string{field.name, field.value, reqStr, status}
-		table.Append(row)
+		appendRow(table, row)
 	}
 
-	table.Render()
+	if err := table.Render(); err != nil {
+		fmt.Printf("⚠️  Lỗi khi hiển thị bảng: %v\n", err)
+	}
 
 	// Print Additional Notes
 	fmt.Println("\n📝 GHI CHÚ THÊM:")
@@ -161,16 +183,13 @@ func RenderComparisonTable(records []database.RentalRecord) {
 	fmt.Println("                       SO SÁNH PHÒNG TRỌ SONG SONG                       ")
 	fmt.Println("=========================================================================")
 
-	table := tablewriter.NewWriter(os.Stdout)
+	table := newResultsTable(30)
 
 	headers := []string{"Tiêu chí"}
 	for i, rec := range records {
 		headers = append(headers, fmt.Sprintf("Phòng %d (ID: %d)", i+1, rec.ID))
 	}
-	table.SetHeader(headers)
-	table.SetAutoWrapText(true)
-	table.SetRowLine(true)
-	table.SetColWidth(30)
+	table.Header(headers)
 
 	schemaPath, err := analyzer.GetSchemaPath()
 	var schema *genai.Schema
@@ -209,7 +228,7 @@ func RenderComparisonTable(records []database.RentalRecord) {
 	for _, rec := range records {
 		rowDate = append(rowDate, rec.CreatedAt)
 	}
-	table.Append(rowDate)
+	appendRow(table, rowDate)
 
 	rowPhone := []string{"Liên hệ chủ nhà"}
 	for _, rec := range records {
@@ -219,7 +238,7 @@ func RenderComparisonTable(records []database.RentalRecord) {
 		}
 		rowPhone = append(rowPhone, phone)
 	}
-	table.Append(rowPhone)
+	appendRow(table, rowPhone)
 
 	for _, field := range fields {
 		row := []string{field.name}
@@ -230,7 +249,7 @@ func RenderComparisonTable(records []database.RentalRecord) {
 			}
 			row = append(row, val)
 		}
-		table.Append(row)
+		appendRow(table, row)
 	}
 
 	rowMissing := []string{"Thiếu thông tin"}
@@ -251,7 +270,7 @@ func RenderComparisonTable(records []database.RentalRecord) {
 			rowMissing = append(rowMissing, strings.Join(missingLabels, ", "))
 		}
 	}
-	table.Append(rowMissing)
+	appendRow(table, rowMissing)
 
 	rowNotes := []string{"Ghi chú thêm"}
 	for _, rec := range records {
@@ -261,8 +280,10 @@ func RenderComparisonTable(records []database.RentalRecord) {
 		}
 		rowNotes = append(rowNotes, notes)
 	}
-	table.Append(rowNotes)
+	appendRow(table, rowNotes)
 
-	table.Render()
+	if err := table.Render(); err != nil {
+		fmt.Printf("⚠️  Lỗi khi hiển thị bảng: %v\n", err)
+	}
 	fmt.Println("=========================================================================")
 }
