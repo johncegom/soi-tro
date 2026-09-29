@@ -46,7 +46,7 @@ jobs:
       - name: Build Binary
         run: |
           mkdir -p dist
-          env GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -ldflags="-s -w" -o dist/soi-tro${{ matrix.suffix }} ./cmd/main.go
+          env GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -ldflags="-s -w" -o dist/soi-tro${{ matrix.suffix }} ./cmd
 
       - name: Package Release Asset (Zip / Tar)
         run: |

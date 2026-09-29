@@ -183,6 +183,24 @@ uses `continue analyzeLoop` for `stepNewInput` instead of `goto nextInput`,
 so it prompts for new input instead of re-running the same `inputRes`.
 Regression coverage: `TestOnAnalysisSuccess` (`cmd/dispatch_test.go`).
 
+## BUG-008: CLI task and release commands omit other cmd source files
+
+**Symptom:** `task run` fails to compile with undefined `dispatch`, action,
+and step names. The same file-only target is used by `task build` and the
+release workflow.
+
+**Root cause:** `go run ./cmd/main.go` and `go build ... ./cmd/main.go` compile
+only that file, while `cmd/dispatch.go` defines the missing names.
+
+**Reachability:** Run `task run`, `task build`, or the release build workflow.
+
+**Options:** Point each command at the `./cmd` package so Go includes all
+source files in the directory.
+
+**Status:** fixed by changing all three commands to target `./cmd`. Verified
+with a package build and task dry run; no behavior test is needed for this
+configuration-only change.
+
 ## BUG-009: Profile editor scrolls the first input title out of view
 
 **Symptom:** On a short terminal, the first profile input's title disappears

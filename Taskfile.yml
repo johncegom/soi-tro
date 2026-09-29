@@ -10,12 +10,12 @@ tasks:
     desc: Build the application binary
     cmds:
       - go run github.com/tc-hib/go-winres@latest make --arch amd64,386 --out cmd/rsrc
-      - go build -o bin/soi-tro.exe ./cmd/main.go
+      - go build -o bin/soi-tro.exe ./cmd
 
   run:
     desc: Run the application
     cmds:
-      - go run ./cmd/main.go
+      - go run ./cmd
 
   clean:
     desc: Clean build artifacts

@@ -167,25 +167,26 @@ list; do not guess your vendor). Use the row for `role` + your tool with
 eagd-binding: role=advise tool=Agent model=opus status=ok probed=2026-09-23 reported=claude-opus-5-5
 eagd-binding: role=grade tool=Agent model=haiku status=ok probed=2026-09-18 reported=claude-haiku-4-5-20251001
 eagd-binding: role=dream tool=Agent model=opus status=ok probed=2026-09-23 reported=claude-opus-5-5
-eagd-binding: role=advise tool=spawn_agent model=gpt-5.6-sol effort=high retry_model=gpt-6-astra retry_effort=medium status=unverified
-eagd-binding: role=grade tool=spawn_agent model=gpt-5.6-luna effort=high status=unverified
-eagd-binding: role=dream tool=spawn_agent model=gpt-6-astra effort=medium status=unverified
+eagd-binding: role=advise tool=spawn_agent model=gpt-6-astra effort=medium status=ok verification=assumed reported=unknown
+eagd-binding: role=grade tool=spawn_agent model=gpt-6-luna effort=high status=ok verification=assumed reported=unknown
+eagd-binding: role=dream tool=spawn_agent model=gpt-6-astra effort=medium status=ok verification=assumed reported=unknown
 <!-- eagd-bindings:end -->
 
-**`spawn_agent` harness (GPT models).** These rows were carried over from the
-earlier hand-written setup and have never been probed, so they are
-`status=unverified` and fall under the "no usable row" rules below (Advise
-and Dream skip, Grade falls back). Re-run `/bootstrap-eagd-pattern` from that
-harness: it probes each row, and only then sets `status=ok`. `effort` is the
-`reasoning_effort` to pass; every spawn starts with no inherited
-conversation context. For Advise only: if the advisor explicitly says it
-cannot resolve the decision or reports low confidence, retry once with
-`retry_model` and its `retry_effort`, add a second Advise-calls row for the
-retry, and never substitute another model silently.
+**`spawn_agent` harness (GPT models).** These rows have `status=ok` by the
+maintainer's explicit assumption, recorded as `verification=assumed`. Probes
+on 2026-09-29 did not confirm the exact variants: `gpt-6-astra` reported
+`gpt-6`, `gpt-6-luna` reported `gpt-5.6-luna`, and more specific probes
+returned `unknown` for both. Treat the tool's `model` override as the chosen
+binding while this assumption stands; do not describe either variant as
+probe-verified. `effort` is the `reasoning_effort` to pass; every spawn starts
+with no inherited conversation context. For these assumed bindings, an
+agent's self-reported model ID is inconclusive, even when it names a different
+variant. Change `status` to `stale` and add a Binding-changes row only if
+trusted runtime metadata shows a different model or the model override fails.
 
 **Execute.** The primary session. Do not restart it to change its model. On
 a `spawn_agent` harness, when the task runner lets you pick the Execute
-model, prefer `gpt-5.6-sol` with `reasoning_effort: medium`.
+model, prefer `gpt-6-sol` with `reasoning_effort: medium`.
 
 **Advise.** Fires on observable conditions, never on felt doubt: one call
 before writing a Program design section, and one call before changing DB
@@ -198,8 +199,9 @@ prompt contains: the question; your leaning with the case for and against;
 the artifacts the decision turns on, verbatim (not your summary, not the
 transcript); a request to name any context it lacked; and a first
 instruction to begin its reply with `model: <its own id>`. Wait for the
-reply before continuing. If `reported` differs from the row, set the row to
-`status=stale`, add a Binding-changes row, and skip Advise until fixed. No
+reply before continuing. For a probe-verified binding, if `reported` differs
+from the row, set it to `status=stale`, add a Binding-changes row, and skip
+Advise until fixed. For an assumed binding, apply the metadata rule above. No
 usable row or the spawn errors: proceed on your leaning, log Status
 `SKIPPED reason=no-verified-model-binding` (or the actual code), and say in
 the final report that Advise did not run. After each call add one row to
