@@ -21,6 +21,9 @@ Append one single-line row per event at the end of the matching table. Use `—`
 | 2026-09-18 | dream | Agent | — | opus (ok) | initial install, same model as advise, covered by the opus probe (claude-opus-5) |
 | 2026-09-23 | advise | Agent | opus (ok, reported claude-opus-5) | opus (ok, reported claude-opus-5-5) | re-probe on /bootstrap-eagd-pattern re-run, underlying opus version upgraded |
 | 2026-09-23 | dream | Agent | opus (ok, reported claude-opus-5) | opus (ok, reported claude-opus-5-5) | re-probe on /bootstrap-eagd-pattern re-run, underlying opus version upgraded |
+| 2026-09-29 | advise | spawn_agent | gpt-5.6-sol high (unverified; retry gpt-6-astra medium) | gpt-6-astra medium (ok, assumed) | Maintainer requested assumed status=ok; probe reported gpt-6, then unknown, so exact variant is unverified |
+| 2026-09-29 | grade | spawn_agent | gpt-5.6-luna high (unverified) | gpt-6-luna high (ok, assumed) | Maintainer requested assumed status=ok; probe reported gpt-5.6-luna, then unknown, so exact variant is unverified |
+| 2026-09-29 | dream | spawn_agent | gpt-6-astra medium (unverified) | gpt-6-astra medium (ok, assumed) | Maintainer requested assumed status=ok; probe reported gpt-6, then unknown, so exact variant is unverified |
 
 ## Grade fallbacks
 

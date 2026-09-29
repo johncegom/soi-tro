@@ -134,7 +134,7 @@ Bạn có thể khởi chạy chương trình bằng nhiều cách:
   ```
 - **Chạy trực tiếp bằng lệnh Go:**
   ```bash
-  go run ./cmd/main.go
+  go run ./cmd
   ```
 
 ---
