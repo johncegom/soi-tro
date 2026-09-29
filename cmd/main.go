@@ -12,6 +12,7 @@ import (
 	"soi-tro/internal/exporter"
 	"soi-tro/internal/gemini"
 	"soi-tro/internal/logger"
+	"soi-tro/internal/preferences"
 	"soi-tro/internal/ui"
 
 	"github.com/charmbracelet/huh"
@@ -76,7 +77,8 @@ func run(ctx context.Context) error {
 						huh.NewOption("3. Quản lý các trường thông tin (Schema)", "manage"),
 						huh.NewOption("4. Cài đặt xuất kết quả (Export)", "export"),
 						huh.NewOption("5. Cấu hình mô hình Gemini (Model)", "model"),
-						huh.NewOption("6. Thoát", "exit"),
+						huh.NewOption("6. Hồ sơ tìm phòng", "profile"),
+						huh.NewOption("7. Thoát", "exit"),
 					).
 					Value(&mainChoice),
 			),
@@ -98,6 +100,10 @@ func run(ctx context.Context) error {
 			if err := ui.ShowHistoryAndCompareMenu(); err != nil {
 				sessionLog.Error("history view failed", "operation", "ui.history", "error", "show_history")
 				fmt.Printf("❌ Lỗi hiển thị lịch sử: %v\n", err)
+			}
+		case actionProfile:
+			if err := ui.ManageSearchProfile(); err != nil {
+				fmt.Printf("❌ Lỗi hồ sơ tìm phòng: %v\n", err)
 			}
 		case actionManage:
 			if err := ui.ManageSchemaLoop(); err != nil {
@@ -207,6 +213,9 @@ analyzeLoop:
 
 			// 5. Format and print the final compliance table & handle clipboard copying
 			ui.RenderResults(result, cfg)
+			if err := showProfileMatch(result); err != nil {
+				fmt.Printf("⚠️  Không thể đánh giá hồ sơ tìm phòng: %v\n", err)
+			}
 			if dbID, dbErr := database.SaveRental(result); dbErr == nil {
 				fmt.Printf("💾 Đã lưu kết quả phân tích vào lịch sử (Mã số: #%d)\n", dbID)
 			}
@@ -259,6 +268,21 @@ analyzeLoop:
 				}
 			}
 		}
+	}
+	return nil
+}
+
+func showProfileMatch(result *gemini.RentalExtractionResult) error {
+	store, err := preferences.DefaultStore()
+	if err != nil {
+		return err
+	}
+	profile, err := store.Load()
+	if err != nil {
+		return err
+	}
+	if profile != nil {
+		ui.RenderProfileMatch(preferences.Evaluate(*profile, preferences.FactsFromExtraction(result)))
 	}
 	return nil
 }

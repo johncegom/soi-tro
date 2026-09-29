@@ -12,9 +12,10 @@ The logger reads these environment variables at startup:
 | `LOG_LEVEL` | `debug`, `info`, `warn`, `error` | `info` |
 | `LOG_FORMAT` | `text`, `json` | `text` |
 | `LOG_FILE` | Log file path | `~/.config/soi-tro/app.log` |
-| `LOG_CONSOLE` | `true`, `false` | `true` |
+| `LOG_CONSOLE` | `true`, `false` | `false` |
 
-The file and console receive the same records when console output is enabled.
+Logs go to the file by default so diagnostic events do not interrupt interactive
+menus. Set `LOG_CONSOLE=true` to mirror them to the terminal when debugging.
 Log rotation is not implemented; manage retention outside the application if
 the log file needs a size or age limit.
 

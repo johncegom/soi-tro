@@ -23,14 +23,14 @@ func TestArrowModel_KeyMessages(t *testing.T) {
 	// 1. Test Init
 	m.Init()
 
-	// 2. Test Left Arrow KeyMsg (should set backPressed and exit)
-	newModel, cmd := m.Update(tea.KeyMsg{Type: tea.KeyLeft})
+	// 2. Test Esc KeyMsg (should set backPressed and exit)
+	newModel, cmd := m.Update(tea.KeyMsg{Type: tea.KeyEsc})
 	typedModel, ok := newModel.(*arrowModel)
 	assert.True(t, ok)
 	assert.True(t, typedModel.backPressed)
 	assert.NotNil(t, cmd)
 
-	// 3. Test Right Arrow KeyMsg (should translate key to Enter and not crash)
+	// 3. Test Right Arrow KeyMsg (should reach the focused field without crashing)
 	_, _ = m.Update(tea.KeyMsg{Type: tea.KeyRight})
 
 	// 4. Test View (should render successfully)

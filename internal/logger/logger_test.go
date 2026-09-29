@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -25,9 +26,31 @@ func TestDefaultConfig(t *testing.T) {
 		t.Errorf("Expected default format to be 'text', got '%s'", cfg.Format)
 	}
 
-	if cfg.Console != true {
-		t.Errorf("Expected default console to be true")
+	if cfg.Console {
+		t.Error("Expected diagnostic logs to be hidden from the interactive console by default")
 	}
+}
+
+func TestDefaultLoggingKeepsTerminalClean(t *testing.T) {
+	resetLogger()
+	t.Cleanup(resetLogger)
+	readEnd, writeEnd, err := os.Pipe()
+	require.NoError(t, err)
+	oldStdout := os.Stdout
+	os.Stdout = writeEnd
+	t.Cleanup(func() { os.Stdout = oldStdout })
+
+	cfg := DefaultConfig()
+	cfg.OutputPath = filepath.Join(t.TempDir(), "app.log")
+	require.NoError(t, Init(cfg))
+	Info("startup diagnostic")
+	require.NoError(t, writeEnd.Close())
+	terminalOutput, err := io.ReadAll(readEnd)
+	require.NoError(t, err)
+	assert.Empty(t, terminalOutput)
+	fileOutput, err := os.ReadFile(cfg.OutputPath)
+	require.NoError(t, err)
+	assert.Contains(t, string(fileOutput), "startup diagnostic")
 }
 
 func TestLoadFromEnv(t *testing.T) {
@@ -48,6 +71,13 @@ func TestLoadFromEnv(t *testing.T) {
 
 	if cfg.Console != false {
 		t.Errorf("Expected console to be false")
+	}
+}
+
+func TestLoadFromEnvConsoleOptIn(t *testing.T) {
+	t.Setenv("LOG_CONSOLE", "true")
+	if !LoadFromEnv().Console {
+		t.Fatal("LOG_CONSOLE=true should enable diagnostic console output")
 	}
 }
 

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"soi-tro/internal/database"
+	"soi-tro/internal/preferences"
 
 	"github.com/charmbracelet/huh"
 )
@@ -108,6 +109,14 @@ func CompareRentalsUI() error {
 
 // ListRentalsUI prints every saved rental.
 func ListRentalsUI() error {
+	store, err := preferences.DefaultStore()
+	if err != nil {
+		return err
+	}
+	profile, err := store.Load()
+	if err != nil {
+		return err
+	}
 	records, err := database.ListRentals()
 	if err != nil {
 		return err
@@ -126,6 +135,9 @@ func ListRentalsUI() error {
 		fmt.Printf("   - Liên hệ: %s | Điện: %s | Nước: %s\n", rec.Result.PhoneNumber, rec.Result.Electricity, rec.Result.Water)
 		if len(rec.Result.MissingFields) > 0 {
 			fmt.Printf("   - ⚠️  Thiếu thông tin: %v\n", rec.Result.MissingFields)
+		}
+		if profile != nil {
+			RenderProfileMatch(preferences.Evaluate(*profile, preferences.FactsFromExtraction(rec.Result)))
 		}
 		fmt.Println("-------------------------------------------------------------------------")
 	}
