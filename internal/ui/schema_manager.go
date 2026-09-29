@@ -421,7 +421,7 @@ func ConfigureExport() error {
 		huh.NewGroup(
 			huh.NewInput().
 				Title("Thư mục lưu file xuất kết quả").
-				Description(fmt.Sprintf("Nhập đường dẫn thư mục. Nhấn Enter hoặc phím Phải để dùng gợi ý bảo mật (%s)", defaultExportDir)).
+				Description(fmt.Sprintf("Nhập đường dẫn thư mục. Nhấn Enter để dùng gợi ý bảo mật (%s)", defaultExportDir)).
 				Placeholder(defaultExportDir).
 				Value(&dirInput).
 				Validate(func(s string) error {

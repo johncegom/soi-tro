@@ -13,6 +13,7 @@ const (
 	actionManage
 	actionExport
 	actionModel
+	actionProfile
 	actionExit
 )
 
@@ -27,6 +28,8 @@ func dispatch(choice string) action {
 		return actionExport
 	case "model":
 		return actionModel
+	case "profile":
+		return actionProfile
 	case "exit":
 		return actionExit
 	default:

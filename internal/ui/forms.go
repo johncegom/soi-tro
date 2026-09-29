@@ -31,7 +31,7 @@ type InputResult struct {
 	ImagePath string
 }
 
-// ErrGoBack is returned when the user presses the left arrow to go back to the previous menu.
+// ErrGoBack is returned when the user presses a back key to return to the previous menu.
 var ErrGoBack = errors.New("quay lại menu trước")
 
 type arrowModel struct {
@@ -44,15 +44,11 @@ func (m *arrowModel) Init() tea.Cmd {
 }
 
 func (m *arrowModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	// Only Esc is global; focused fields own arrows and Enter.
 	if k, ok := msg.(tea.KeyMsg); ok {
-		switch k.Type {
-		case tea.KeyLeft:
+		if k.Type == tea.KeyEsc {
 			m.backPressed = true
 			return m, tea.Quit
-		case tea.KeyRight:
-			// Translate Right arrow to Enter key
-			msg = tea.KeyMsg{Type: tea.KeyEnter}
-		default:
 		}
 	}
 
@@ -75,7 +71,7 @@ func (m *arrowModel) View() string {
 	return m.form.View()
 }
 
-// RunFormWithArrows runs a form allowing Left to go back and Right/Enter to submit.
+// RunFormWithArrows runs a form with Esc for back; arrow keys go to the focused field.
 func RunFormWithArrows(form *huh.Form) (bool, error) {
 	m := &arrowModel{
 		form: form,

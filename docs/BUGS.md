@@ -182,3 +182,73 @@ post-success choice to a typed `successStep`; `runAnalyze` (`cmd/main.go`)
 uses `continue analyzeLoop` for `stepNewInput` instead of `goto nextInput`,
 so it prompts for new input instead of re-running the same `inputRes`.
 Regression coverage: `TestOnAnalysisSuccess` (`cmd/dispatch_test.go`).
+
+## BUG-009: Profile editor scrolls the first input title out of view
+
+**Symptom:** On a short terminal, the first profile input's title disappears
+after moving through the editor.
+
+**Root cause:** All seven fields shared one Huh group. Its viewport scrolls to
+the focused field and clips earlier field titles when the group is taller than
+the terminal.
+
+**Reachability:** Main menu, "Hồ sơ tìm phòng", "Tạo / sửa hồ sơ", then advance
+through fields in a short terminal.
+
+**Options:** Put each field on a separate titled page (chosen), or change the
+group layout to keep the focused field's label visible while scrolling.
+
+**Status:** fixed in task 013 by using one field per group in
+`internal/ui/profile.go`. Regression coverage: `TestProfileEditorFirstInputTitleVisible`;
+the original seven-field group failed the compact-terminal rendering check.
+
+## BUG-010: Profile editor has no visible back shortcut
+
+**Symptom:** The first profile input only shows "enter next"; Esc does not
+return to the profile menu, leaving Ctrl+C as the discoverable exit.
+
+**Root cause:** The form wrapper handled Left as back but did not handle Esc,
+and the profile editor did not show a back hint.
+
+**Reachability:** Main menu, "Hồ sơ tìm phòng", "Tạo / sửa hồ sơ", first input.
+
+**Options:** Handle Esc as back in the shared form wrapper and show its action
+on each editor page (chosen); add an explicit cancel field instead.
+
+**Status:** fixed in task 013. `TestProfileEditorEscapeReturnsWithoutAborting`
+and `TestProfileEditorFirstInputTitleVisible` cover the back key and visible hint.
+
+## BUG-011: Back and submit shortcuts override Yes/No arrow selection
+
+**Symptom:** Pressing Left on a Yes/No question navigates back, and pressing
+Right submits instead of changing the selected answer.
+
+**Root cause:** The shared form wrapper intercepted Left and Right before Huh's
+Confirm field could handle its documented arrow bindings.
+
+**Reachability:** Profile editor pet, parking, and elevator questions, plus
+other confirmation forms that use `RunFormWithArrows`.
+
+**Options:** Pass both arrows to the focused field and keep Esc for back
+(chosen); special-case confirmation fields in the wrapper.
+
+**Status:** fixed in task 013. `TestConfirmArrowsToggleWithoutNavigating`
+reproduced the intercepted Left key before the fix and now covers both arrows.
+
+## BUG-012: Startup diagnostics clutter the interactive terminal
+
+**Symptom:** On launch, timestamped INFO records for application startup,
+environment loading, database initialization, API-key setup, and schema setup
+appear above the main menu.
+
+**Root cause:** `logger.DefaultConfig` enabled `Console` by default, so `Init`
+mirrored all file diagnostics to stdout.
+
+**Reachability:** Every normal CLI startup without `LOG_CONSOLE=false`.
+
+**Options:** Default to file-only logging and retain `LOG_CONSOLE=true` for
+explicit debugging (chosen); suppress selected startup events instead.
+
+**Status:** fixed by changing the default and documenting the opt-in.
+Regression coverage: `TestDefaultLoggingKeepsTerminalClean` failed on actual
+stdout output before the fix and now checks both quiet stdout and file output.

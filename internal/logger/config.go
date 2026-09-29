@@ -26,7 +26,7 @@ func DefaultConfig() Config {
 		Level:      "info",
 		Format:     "text", // text for development, json for production
 		OutputPath: filepath.Join(homeDir, ".config", "soi-tro", "app.log"),
-		Console:    true,
+		Console:    false,
 	}
 }
 

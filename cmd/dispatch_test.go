@@ -25,6 +25,12 @@ func TestDispatch(t *testing.T) {
 	}
 }
 
+func TestProfileMenuIsReachable(t *testing.T) {
+	if got := dispatch("profile"); got == actionAnalyze {
+		t.Fatalf("dispatch(profile) = %v, want a dedicated profile action", got)
+	}
+}
+
 // BUG-006: "change" must go back to the input form, not fall through.
 func TestOnAnalysisError(t *testing.T) {
 	tests := []struct {
