@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"regexp"
+	"slices"
 	"soi-tro/internal/priceparser"
 	"strconv"
 	"strings"
@@ -23,6 +24,12 @@ type Result struct {
 	MoveInCashVND  *int64
 }
 
+const (
+	findingPass    = "pass"
+	findingFail    = "fail"
+	findingUnknown = "unknown"
+)
+
 var (
 	commaMoney    = regexp.MustCompile(`^\d{1,3}(,\d{3})+$`)
 	depositMonths = regexp.MustCompile(`^(?:(?:cọc|đặt cọc)\s+)?(\d+)\s+tháng$`)
@@ -38,29 +45,29 @@ func Evaluate(p SearchProfile, f RentalFacts) Result {
 	}
 	add := func(field, status, reason string) {
 		r.Findings = append(r.Findings, Finding{field, status, reason})
-		if status == "unknown" {
+		if status == findingUnknown {
 			r.UnknownCount++
 		}
-		if status == "fail" {
+		if status == findingFail {
 			r.Classification = "Reject"
 		}
 	}
 	if p.MaxRentVND != nil {
 		if rent, ok := parseMoney(f.Price); !ok {
-			add("price", "unknown", "Giá thuê hằng tháng bị thiếu hoặc không rõ.")
+			add("price", findingUnknown, "Giá thuê hằng tháng bị thiếu hoặc không rõ.")
 		} else if rent > *p.MaxRentVND {
-			add("price", "fail", fmt.Sprintf("Giá thuê %d đồng vượt mức tối đa %d đồng.", rent, *p.MaxRentVND))
+			add("price", findingFail, fmt.Sprintf("Giá thuê %d đồng vượt mức tối đa %d đồng.", rent, *p.MaxRentVND))
 		} else {
-			add("price", "pass", fmt.Sprintf("Giá thuê %d đồng nằm trong giới hạn.", rent))
+			add("price", findingPass, fmt.Sprintf("Giá thuê %d đồng nằm trong giới hạn.", rent))
 		}
 	}
 	if p.MaxMoveInCashVND != nil {
 		if cash, ok := moveInCash(f.Price, f.Deposit); !ok {
-			add("move_in_cash", "unknown", "Không thể tính chính xác tiền thuê cộng tiền cọc; chưa tính các khoản trả trước khác.")
+			add("move_in_cash", findingUnknown, "Không thể tính chính xác tiền thuê cộng tiền cọc; chưa tính các khoản trả trước khác.")
 		} else if cash > *p.MaxMoveInCashVND {
-			add("move_in_cash", "fail", fmt.Sprintf("Tiền thuê cộng tiền cọc %d đồng vượt mức tối đa %d đồng; chưa tính các khoản trả trước khác.", cash, *p.MaxMoveInCashVND))
+			add("move_in_cash", findingFail, fmt.Sprintf("Tiền thuê cộng tiền cọc %d đồng vượt mức tối đa %d đồng; chưa tính các khoản trả trước khác.", cash, *p.MaxMoveInCashVND))
 		} else {
-			add("move_in_cash", "pass", fmt.Sprintf("Tiền thuê cộng tiền cọc %d đồng nằm trong giới hạn; chưa tính các khoản trả trước khác.", cash))
+			add("move_in_cash", findingPass, fmt.Sprintf("Tiền thuê cộng tiền cọc %d đồng nằm trong giới hạn; chưa tính các khoản trả trước khác.", cash))
 		}
 	}
 	if p.MaxDepositMonths != nil {
@@ -68,14 +75,26 @@ func Evaluate(p SearchProfile, f RentalFacts) Result {
 			add("deposit_months", status, reason)
 		}
 	}
+	evaluateOtherRules(p, f, add)
+	if p.MaxUnknown != nil && r.UnknownCount > *p.MaxUnknown {
+		add("unknown_count", findingFail, fmt.Sprintf("Có %d tiêu chí chưa rõ, vượt giới hạn %d.", r.UnknownCount, *p.MaxUnknown))
+	}
+	if r.Classification != "Reject" && r.UnknownCount > 0 {
+		r.Classification = "Needs checking"
+	}
+	return r
+}
+
+func evaluateOtherRules(p SearchProfile, f RentalFacts, add func(field, status, reason string)) {
 	if p.RequirePets {
 		status := yesNo(f.PetsAllowed,
 			[]string{"có", "được nuôi pet", "cho nuôi pet", "được nuôi thú cưng", "cho nuôi thú cưng"},
 			[]string{"không", "không cho nuôi pet", "không cho nuôi thú cưng", "cấm nuôi pet", "cấm nuôi thú cưng"})
 		reason := "Quy định nuôi thú cưng chưa rõ hoặc có điều kiện."
-		if status == "pass" {
+		switch status {
+		case findingPass:
 			reason = "Tin đăng cho phép nuôi thú cưng."
-		} else if status == "fail" {
+		case findingFail:
 			reason = "Tin đăng không cho nuôi thú cưng."
 		}
 		add("pets_allowed", status, reason)
@@ -83,9 +102,10 @@ func Evaluate(p SearchProfile, f RentalFacts) Result {
 	if p.RequireParking {
 		status := parking(f.ParkingFee)
 		reason := "Thông tin chỗ giữ xe bị thiếu hoặc chưa rõ."
-		if status == "pass" {
+		switch status {
+		case findingPass:
 			reason = "Tin đăng có chỗ giữ xe."
-		} else if status == "fail" {
+		case findingFail:
 			reason = "Tin đăng không có chỗ giữ xe."
 		}
 		add("parking_fee", status, reason)
@@ -95,55 +115,49 @@ func Evaluate(p SearchProfile, f RentalFacts) Result {
 			[]string{"có", "có thang máy", "có sử dụng thang máy"},
 			[]string{"không", "không có thang máy", "ko thang máy"})
 		reason := "Thang máy chưa được đề cập hoặc thông tin chưa rõ."
-		if status == "pass" {
+		switch status {
+		case findingPass:
 			reason = "Tin đăng có thang máy."
-		} else if status == "fail" {
+		case findingFail:
 			reason = "Tin đăng không có thang máy."
 		}
 		add("elevator", status, reason)
 	}
 	if p.MaxFloor != nil {
 		if floor, ok := parseFloor(f.Floor); !ok {
-			add("floor", "unknown", "Tầng của phòng bị thiếu hoặc không rõ.")
+			add("floor", findingUnknown, "Tầng của phòng bị thiếu hoặc không rõ.")
 		} else if floor > *p.MaxFloor {
-			add("floor", "fail", fmt.Sprintf("Tầng %d cao hơn tầng tối đa %d.", floor, *p.MaxFloor))
+			add("floor", findingFail, fmt.Sprintf("Tầng %d cao hơn tầng tối đa %d.", floor, *p.MaxFloor))
 		} else {
-			add("floor", "pass", fmt.Sprintf("Tầng %d nằm trong giới hạn.", floor))
+			add("floor", findingPass, fmt.Sprintf("Tầng %d nằm trong giới hạn.", floor))
 		}
 	}
-	if p.MaxUnknown != nil && r.UnknownCount > *p.MaxUnknown {
-		add("unknown_count", "fail", fmt.Sprintf("Có %d tiêu chí chưa rõ, vượt giới hạn %d.", r.UnknownCount, *p.MaxUnknown))
-	}
-	if r.Classification != "Reject" && r.UnknownCount > 0 {
-		r.Classification = "Needs checking"
-	}
-	return r
 }
 
 func checkDepositMonths(price, deposit string, limit int) (string, string) {
 	if m := depositMonths.FindStringSubmatch(strings.ToLower(strings.TrimSpace(deposit))); m != nil {
 		months, err := strconv.ParseInt(m[1], 10, 64)
 		if err != nil {
-			return "unknown", "Số tháng cọc trong tin đăng không rõ."
+			return findingUnknown, "Số tháng cọc trong tin đăng không rõ."
 		}
 		if months > int64(limit) {
-			return "fail", fmt.Sprintf("Tiền cọc %d tháng vượt giới hạn %d tháng.", months, limit)
+			return findingFail, fmt.Sprintf("Tiền cọc %d tháng vượt giới hạn %d tháng.", months, limit)
 		}
-		return "pass", fmt.Sprintf("Tiền cọc %d tháng nằm trong giới hạn %d tháng.", months, limit)
+		return findingPass, fmt.Sprintf("Tiền cọc %d tháng nằm trong giới hạn %d tháng.", months, limit)
 	}
 	amount, amountOK := parseMoney(deposit)
 	if !amountOK {
-		return "unknown", "Tiền cọc bị thiếu hoặc không rõ."
+		return findingUnknown, "Tiền cọc bị thiếu hoặc không rõ."
 	}
 	rent, rentOK := parseMoney(price)
 	if !rentOK || rent == 0 {
-		return "unknown", "Không thể so tiền cọc với giá thuê hằng tháng vì giá thuê bị thiếu hoặc không rõ."
+		return findingUnknown, "Không thể so tiền cọc với giá thuê hằng tháng vì giá thuê bị thiếu hoặc không rõ."
 	}
 	q, remainder := amount/rent, amount%rent
 	if q > int64(limit) || (q == int64(limit) && remainder > 0) {
-		return "fail", fmt.Sprintf("Tiền cọc %d đồng vượt giới hạn %d tháng tiền thuê.", amount, limit)
+		return findingFail, fmt.Sprintf("Tiền cọc %d đồng vượt giới hạn %d tháng tiền thuê.", amount, limit)
 	}
-	return "pass", fmt.Sprintf("Tiền cọc %d đồng nằm trong giới hạn %d tháng tiền thuê.", amount, limit)
+	return findingPass, fmt.Sprintf("Tiền cọc %d đồng nằm trong giới hạn %d tháng tiền thuê.", amount, limit)
 }
 
 func parseMoney(raw string) (int64, bool) {
@@ -182,35 +196,27 @@ func moveInCash(price, deposit string) (int64, bool) {
 
 func yesNo(raw string, yes, no []string) string {
 	work := strings.ToLower(strings.TrimSpace(raw))
-	for _, value := range no {
-		if work == value {
-			return "fail"
-		}
+	if slices.Contains(no, work) {
+		return findingFail
 	}
-	for _, value := range yes {
-		if work == value {
-			return "pass"
-		}
+	if slices.Contains(yes, work) {
+		return findingPass
 	}
-	return "unknown"
+	return findingUnknown
 }
 
 func parking(raw string) string {
 	work := strings.ToLower(strings.TrimSpace(raw))
-	for _, value := range []string{"không có chỗ để xe", "không có chỗ đậu xe", "không có chỗ gửi xe", "không cho để xe"} {
-		if work == value {
-			return "fail"
-		}
+	if slices.Contains([]string{"không có chỗ để xe", "không có chỗ đậu xe", "không có chỗ gửi xe", "không cho để xe"}, work) {
+		return findingFail
 	}
-	for _, value := range []string{"có chỗ để xe", "có chỗ đậu xe", "có chỗ gửi xe", "giữ xe miễn phí"} {
-		if work == value {
-			return "pass"
-		}
+	if slices.Contains([]string{"có chỗ để xe", "có chỗ đậu xe", "có chỗ gửi xe", "giữ xe miễn phí"}, work) {
+		return findingPass
 	}
 	if parkingFee.MatchString(work) {
-		return "pass"
+		return findingPass
 	}
-	return "unknown"
+	return findingUnknown
 }
 
 func parseFloor(raw string) (int, bool) {

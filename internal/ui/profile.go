@@ -1,12 +1,13 @@
 package ui
 
 import (
+	"errors"
 	"fmt"
+	"soi-tro/internal/preferences"
 	"strconv"
 	"strings"
 
 	"github.com/charmbracelet/huh"
-	"soi-tro/internal/preferences"
 )
 
 // ManageSearchProfile edits the one local profile without changing API settings.
@@ -146,7 +147,7 @@ func parseOptional64(raw string) (*int64, error) {
 	}
 	v, err := strconv.ParseInt(raw, 10, 64)
 	if err != nil || v < 0 {
-		return nil, fmt.Errorf("nhập số nguyên không âm")
+		return nil, errors.New("nhập số nguyên không âm")
 	}
 	return &v, nil
 }
@@ -158,7 +159,7 @@ func parseOptionalInt(raw string) (*int, error) {
 	}
 	n := int(*v)
 	if int64(n) != *v {
-		return nil, fmt.Errorf("số quá lớn")
+		return nil, errors.New("số quá lớn")
 	}
 	return &n, nil
 }
@@ -169,6 +170,7 @@ func formatInt64(v *int64) string {
 	}
 	return strconv.FormatInt(*v, 10)
 }
+
 func formatInt(v *int) string {
 	if v == nil {
 		return ""
@@ -263,19 +265,19 @@ func profileStatus(code string) string {
 
 func profileField(code string) string {
 	switch code {
-	case "price":
+	case fieldPrice:
 		return "Giá thuê"
 	case "move_in_cash":
 		return "Giới hạn cũ — tiền thuê + cọc"
 	case "deposit_months":
 		return "Số tháng cọc"
-	case "pets_allowed":
+	case fieldPetsAllowed:
 		return "Nuôi thú cưng"
-	case "parking_fee":
+	case fieldParkingFee:
 		return "Chỗ giữ xe"
 	case "elevator":
 		return "Thang máy"
-	case "floor":
+	case fieldFloor:
 		return "Tầng"
 	case "unknown_count":
 		return "Số tiêu chí thiếu hoặc chưa rõ"

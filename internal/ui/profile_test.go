@@ -3,12 +3,12 @@ package ui
 import (
 	"io"
 	"os"
+	"soi-tro/internal/preferences"
 	"strings"
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/huh"
-	"soi-tro/internal/preferences"
 )
 
 func TestProfileEditorFirstInputTitleVisible(t *testing.T) {

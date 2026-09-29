@@ -87,11 +87,11 @@ func RenderResults(result *gemini.RentalExtractionResult, config *analyzer.Confi
 		}
 	} else {
 		fields = []displayField{
-			{"price", "Giá thuê", result.Price},
+			{fieldPrice, "Giá thuê", result.Price},
 			{"deposit", "Tiền đặt cọc", result.Deposit},
-			{"floor", "Số tầng / Lầu", result.Floor},
-			{"parking_fee", "Phí giữ xe", result.ParkingFee},
-			{"pets_allowed", "Cho phép nuôi thú cưng", result.PetsAllowed},
+			{fieldFloor, "Số tầng / Lầu", result.Floor},
+			{fieldParkingFee, "Phí giữ xe", result.ParkingFee},
+			{fieldPetsAllowed, "Cho phép nuôi thú cưng", result.PetsAllowed},
 			{"electricity", "Tiền điện", result.Electricity},
 			{"water", "Tiền nước", result.Water},
 		}
@@ -214,11 +214,11 @@ func RenderComparisonTable(records []database.RentalRecord) {
 		}
 	} else {
 		fields = []compareField{
-			{"Giá thuê", "price"},
+			{"Giá thuê", fieldPrice},
 			{"Tiền đặt cọc", "deposit"},
-			{"Số tầng / Lầu", "floor"},
-			{"Phí giữ xe", "parking_fee"},
-			{"Cho nuôi thú cưng", "pets_allowed"},
+			{"Số tầng / Lầu", fieldFloor},
+			{"Phí giữ xe", fieldParkingFee},
+			{"Cho nuôi thú cưng", fieldPetsAllowed},
 			{"Tiền điện", "electricity"},
 			{"Tiền nước", "water"},
 		}

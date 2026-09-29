@@ -9,7 +9,14 @@ import (
 )
 
 // standardFieldKeys is the display order of the built-in fields; custom fields follow.
-var standardFieldKeys = []string{"price", "deposit", "floor", "parking_fee", "pets_allowed", "electricity", "water"}
+const (
+	fieldPrice       = "price"
+	fieldFloor       = "floor"
+	fieldParkingFee  = "parking_fee"
+	fieldPetsAllowed = "pets_allowed"
+)
+
+var standardFieldKeys = []string{fieldPrice, "deposit", fieldFloor, fieldParkingFee, fieldPetsAllowed, "electricity", "water"}
 
 // Schema properties shown outside the field table.
 const (

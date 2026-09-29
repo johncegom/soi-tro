@@ -39,7 +39,7 @@ func (s Store) Load() (*SearchProfile, error) {
 	}
 	var trailing any
 	if err := dec.Decode(&trailing); !errors.Is(err, io.EOF) {
-		return nil, fmt.Errorf("hồ sơ tìm phòng có dữ liệu thừa")
+		return nil, errors.New("hồ sơ tìm phòng có dữ liệu thừa")
 	}
 	if err := p.Validate(); err != nil {
 		return nil, fmt.Errorf("hồ sơ tìm phòng không hợp lệ: %w", err)
