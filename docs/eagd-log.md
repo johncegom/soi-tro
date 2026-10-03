@@ -4,8 +4,8 @@ Append one single-line row per event at the end of the matching table. Use `—`
 
 ## Advise calls
 
-| Date | Branch | Question | Prior leaning | Answer | Taken | Tool | Requested | Reported | Status |
-|---|---|---|---|---|---|---|---|---|---|
+| Date | Branch | Question | Prior leaning | Answer | Taken | Tool | Requested | Reported | Status | Changed |
+|---|---|---|---|---|---|---|---|---|---|---|
 | 2026-09-20 | chore/lint-security-phase2 | Task 017 item 3.1: shape of `run` extraction from `main` (keep DoD signature, handlers struct, or enum dispatch?) | `handlers` struct of func fields + `dispatch`, untested `runAnalyze` | Drop the struct; test `dispatch(choice) action` enum + `mimeTypeFor`; do not thread stdin/stdout; extract `runAnalyze` verbatim in this task; record signature change as a deviation | Partly: struct dropped, rest taken | Agent | opus | claude-opus-5 | OK |
 | 2026-09-29 | task/013 | Conservative local profile evaluation and move-in cash semantics | One preferences package; exact rent plus deposit; unknowns per configured rule | Keep one package; exact-value parsing; unknown tolerance optional; label cash rent + deposit and reject misleading passes | Taken | spawn_agent | gpt-6-astra medium (assumed) | gpt-6 | OK (assumed binding) |
 | 2026-09-29 | main | Keyboard navigation contract for Task 013 | Record contract in Task 013 and test input, confirmation, and menu; shared wrapper makes task-only note less visible | Record contract in Task 013, add comment beside wrapper, and test focused controls; no new shared document | Taken | spawn_agent | gpt-6-astra medium (assumed) | /root/advise_navigation_design | OK (assumed binding) |
