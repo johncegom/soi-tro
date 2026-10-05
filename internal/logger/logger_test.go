@@ -33,6 +33,7 @@ func TestDefaultConfig(t *testing.T) {
 
 func TestDefaultLoggingKeepsTerminalClean(t *testing.T) {
 	resetLogger()
+	logDir := t.TempDir() // register first so resetLogger closes the file before the dir is removed
 	t.Cleanup(resetLogger)
 	readEnd, writeEnd, err := os.Pipe()
 	require.NoError(t, err)
@@ -41,7 +42,7 @@ func TestDefaultLoggingKeepsTerminalClean(t *testing.T) {
 	t.Cleanup(func() { os.Stdout = oldStdout })
 
 	cfg := DefaultConfig()
-	cfg.OutputPath = filepath.Join(t.TempDir(), "app.log")
+	cfg.OutputPath = filepath.Join(logDir, "app.log")
 	require.NoError(t, Init(cfg))
 	Info("startup diagnostic")
 	require.NoError(t, writeEnd.Close())
@@ -481,4 +482,17 @@ func TestLogOperationResult(t *testing.T) {
 		assert.Contains(t, out, "error=save_record")
 		assert.NotContains(t, out, "secret")
 	})
+}
+
+func TestResetLoggerReleasesLogFile(t *testing.T) {
+	resetLogger()
+	t.Cleanup(resetLogger)
+
+	cfg := DefaultConfig()
+	cfg.OutputPath = filepath.Join(t.TempDir(), "app.log")
+	require.NoError(t, Init(cfg))
+
+	resetLogger()
+
+	assert.NoError(t, os.Remove(cfg.OutputPath), "log file must not stay open after reset")
 }

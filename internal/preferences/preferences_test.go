@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"soi-tro/internal/gemini"
 	"strings"
 	"testing"
@@ -194,7 +195,8 @@ func TestStoreRoundTripAndClear(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if info.Mode().Perm() != 0o600 {
+	// Windows does not keep POSIX permission bits, so only check elsewhere.
+	if runtime.GOOS != "windows" && info.Mode().Perm() != 0o600 {
 		t.Fatalf("profile mode = %v", info.Mode().Perm())
 	}
 	got, err := store.Load()

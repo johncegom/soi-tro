@@ -270,3 +270,43 @@ explicit debugging (chosen); suppress selected startup events instead.
 **Status:** fixed by changing the default and documenting the opt-in.
 Regression coverage: `TestDefaultLoggingKeepsTerminalClean` failed on actual
 stdout output before the fix and now checks both quiet stdout and file output.
+
+## BUG-013: Logger keeps its log file open with no way to close it
+
+**Symptom:** `TestDefaultLoggingKeepsTerminalClean` fails on Windows with
+`TempDir RemoveAll cleanup: ... app.log: The process cannot access the file
+because it is being used by another process`. It passes on Linux (checked with
+`golang:1.26` in Docker).
+
+**Root cause:** `logger.Init` opens the log file (`internal/logger/logger.go`,
+`os.OpenFile`) and keeps no handle. `resetLogger` only clears the globals, so
+the file is never closed. Windows cannot delete an open file; Linux can.
+
+**Reachability:** The leak exists in the product, but the process opens the file
+once at startup and holds it until exit, so users see no harm. It is reachable
+only by tests (and any future code that re-initializes the logger) on Windows.
+CI runs on `ubuntu-latest` only, so CI does not show it.
+
+**Options:** Keep the file handle in the logger package and close it in
+`resetLogger` (and a `Close` function if re-initialization is ever needed); or
+only skip the cleanup check on Windows (hides the leak).
+
+**Status:** fixed in task 018: `logger` keeps the open file and `resetLogger` closes it. Regression coverage: `TestResetLoggerReleasesLogFile` (failed on Windows at `logger_test.go:496` before the fix). `TestDefaultLoggingKeepsTerminalClean` now creates its temp dir before registering `resetLogger`, so the file is closed before the directory is removed (cleanup runs last-in-first-out).
+
+## BUG-014: Profile file-mode test cannot pass on Windows
+
+**Symptom:** `TestStoreRoundTripAndClear` fails on Windows with
+`profile mode = -rw-rw-rw-`. It passes on Linux (checked with `golang:1.26` in
+Docker).
+
+**Root cause:** Windows does not keep POSIX permission bits, so `os.Stat`
+reports `0666` even after `Chmod(0o600)`. The test asserts a POSIX mode that
+Windows cannot represent. The production code (`internal/preferences/store.go`
+calls `f.Chmod(0o600)`) is correct.
+
+**Reachability:** Test only. No product behavior is wrong.
+
+**Options:** Skip the mode assertion when `runtime.GOOS == "windows"`, as the
+database owner-only test does (chosen).
+
+**Status:** fixed in task 018: the mode assertion is skipped on Windows; the round trip and clear are still checked. Test-only change, no regression test needed.
