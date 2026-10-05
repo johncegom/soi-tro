@@ -103,6 +103,14 @@ remain active and visible until the user explicitly enters a month limit.
 The manual test that needs a live Gemini request was not run; automated tests
 and vet passed.
 
+Closed 2026-10-04 after re-checking every Definition of Done item against
+`internal/preferences` and `internal/ui` (merged in PR #40). On Windows,
+`go test ./...` still fails `TestStoreRoundTripAndClear` (Go reports mode
+0666 because Windows ignores Unix mode bits) and the unrelated
+`TestDefaultLoggingKeepsTerminalClean` (open log file blocks temp-dir
+cleanup). Neither is a 013 logic defect; the owner-only permission check is
+unverified on Windows.
+
 Do not store the profile by rewriting `config.json`, which contains the Gemini
 credential. Avoid an opaque score: a hard failure must remain visible even when
 every other field matches.

@@ -18,7 +18,7 @@ remain unapproved until the maintainer selects them for implementation.
 | 010 | Add Vietnamese rental-price normalization | Complete | `docs/tasks/010-price-normalizer.md` |
 | 011 | Finish structured-logging integration | Complete | `docs/tasks/011-logging-integration.md` |
 | 012 | Flatten task-document layout | Complete | `docs/tasks/012-flatten-task-docs.md` |
-| 013 | Add personal deal-breaker filtering | In progress | `docs/tasks/013-personal-deal-breaker-filter.md` |
+| 013 | Add personal deal-breaker filtering | Complete | `docs/tasks/013-personal-deal-breaker-filter.md` |
 | 014 | Calculate true monthly and move-in costs | Proposed | `docs/tasks/014-true-rental-cost.md` |
 | 015 | Add viewing packs and a decision trail | In progress (slices 1-2 done; slice 3 pending) | `docs/tasks/015-viewing-decision-trail.md` |
 | 016 | Make UI field ordering deterministic and testable | Complete | `docs/tasks/016-ui-field-ordering-testability.md` |
