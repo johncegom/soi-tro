@@ -46,6 +46,47 @@ Promoted from [IDEA-003](../IDEAS.md#idea-003---viewing-pack-and-decision-trail)
   `internal/ui`; extend `internal/database` only for persistence; keep terminal
   forms and rendering in `internal/ui`.
 
+### Delivery slices
+
+1. **Pure domain (`internal/viewing`, no DB, no migration).** `ItemID`,
+   `ChecklistItem`, `GenerateChecklist`, `DecisionStatus` and its allowed
+   transitions, `ViewingAnswer`, contradiction detection, and
+   `FollowUpQuestions`. Item IDs are `field:<key>` for missing fields and
+   `default:<slug>` for the documented default checklist. Missing-field items
+   come first in input order, then default items; duplicates collapse by ID.
+2. **Persistence.** `DecisionTrailRepository` in `internal/database`. Needs
+   explicit confirmation before the migration (see below) and an Advise call.
+3. **UI.** History editor, status/next-action form, three-way view, and the
+   explicit copy action in `internal/ui` and `cmd`.
+
+Slice 1 is complete. Design choices made in it: any valid status may follow any
+other (a rejected rental can be reopened, so there is no transition table);
+`SetAnswer` rejects blank text and `ClearAnswer` is the only way to remove one;
+answers are keyed by item ID and may target listing fields, so a claim can be
+checked at the viewing; `AnswerLine.Differs` is a normalized (case and
+whitespace) text mismatch that flags a pair for the user to look at, not a proof
+of contradiction, so "4tr5" versus "4,500,000 VND" is flagged; the follow-up
+lists every unresolved item and takes questions only, so answers and notes
+cannot leak into it. `isAbsent` duplicates the Gemini layer's placeholder list
+on purpose to keep `viewing` free of a `gemini` import.
+
+Slice 2 is complete (`internal/database/trail.go`). Design choices made in it:
+one additive `decision_trails` table (`rental_id` PK, `status`, `next_action` as
+UTC RFC3339, `answers` as a JSON object, `updated_at`) with no foreign key;
+`Save` is one upsert; `Get` on a missing trail returns `viewing.NewTrail(id)`;
+`Save` rejects an unknown status; `InitDB` chmods the database file to 0o600
+after the first DDL statement (no-op on Windows); logs carry only the rental ID
+and answer count. Orphans are prevented rather than handled: the maintainer
+decided (2026-10-04) that the delete confirmation offers only "delete rental and
+its viewing notes" or "cancel", and `DeleteRentalAndTrail` removes both in one
+transaction. This narrows the 2026-10-03 note: "keep notes after the rental is
+gone" is not offered, so no orphan-listing method exists. Slice 3 must route
+`ui.DeleteRentalUI` through `DeleteRentalAndTrail` and add that confirmation.
+
+Slice 1 takes no search-profile input because Task 013 does not exist yet; the
+profile source is added when 013 lands (deviation from the first DoD bullet,
+which says "when present").
+
 ## Dependencies and scope
 
 - The task can use Task 013 profiles when available but must also work with the
@@ -58,6 +99,8 @@ Promoted from [IDEA-003](../IDEAS.md#idea-003---viewing-pack-and-decision-trail)
 
 ## Notes and deviations
 
-Deleting a rental must not leave orphaned decision data. Decide and document
-whether deletion cascades or requires a separate confirmation when the database
-design is finalized.
+Deleting a rental must not leave orphaned decision data. Decided by the
+maintainer (2026-10-03): deleting a rental asks for a separate confirmation about
+also deleting its decision trail, rather than cascading silently. The slice 2
+schema and delete flow must define how a trail whose rental is gone is handled,
+so no orphaned notes are left unreachable.

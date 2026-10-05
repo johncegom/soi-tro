@@ -13,10 +13,17 @@ import (
 var (
 	globalLogger *slog.Logger
 	once         sync.Once
+	// logFile is the open log file, kept so resetLogger can close it.
+	logFile *os.File
 )
 
 // resetLogger is used for testing purposes to reset the global logger
 func resetLogger() {
+	if logFile != nil {
+		_ = logFile.Close()
+		logFile = nil
+	}
+
 	globalLogger = nil
 	once = sync.Once{}
 }
@@ -53,11 +60,12 @@ func Init(cfg Config) error {
 		}
 
 		// Open log file
-		logFile, err := os.OpenFile(cfg.OutputPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
+		f, err := os.OpenFile(cfg.OutputPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
 		if err != nil {
 			initErr = fmt.Errorf("failed to open log file: %w", err)
 			return
 		}
+		logFile = f
 
 		// Create handler options
 		opts := &slog.HandlerOptions{
@@ -65,9 +73,9 @@ func Init(cfg Config) error {
 		}
 
 		// Also mirror to console when enabled
-		var w io.Writer = logFile
+		var w io.Writer = f
 		if cfg.Console {
-			w = io.MultiWriter(logFile, os.Stdout)
+			w = io.MultiWriter(f, os.Stdout)
 		}
 
 		if cfg.Format == "json" {
