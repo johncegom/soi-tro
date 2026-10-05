@@ -91,6 +91,20 @@ func InitDB() (err error) {
 		return fmt.Errorf("failed to create table: %w", err)
 	}
 
+	failureStage = "create_decision_trails"
+	if _, err = db.ExecContext(ctx, createDecisionTrailsTable); err != nil {
+		_ = db.Close()
+		return fmt.Errorf("failed to create decision_trails table: %w", err)
+	}
+
+	// Notes are personal data: keep the file owner-readable only. Open is
+	// lazy, so the file exists only after the first statement above.
+	failureStage = "restrict_permissions"
+	if err = os.Chmod(dbPath, 0o600); err != nil {
+		_ = db.Close()
+		return fmt.Errorf("failed to restrict database permissions: %w", err)
+	}
+
 	failureStage = "migrate_schema"
 	if err = addColumnIfMissing(ctx, db, "rentals", "price_vnd", "INTEGER"); err != nil {
 		_ = db.Close()

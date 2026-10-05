@@ -70,6 +70,19 @@ lists every unresolved item and takes questions only, so answers and notes
 cannot leak into it. `isAbsent` duplicates the Gemini layer's placeholder list
 on purpose to keep `viewing` free of a `gemini` import.
 
+Slice 2 is complete (`internal/database/trail.go`). Design choices made in it:
+one additive `decision_trails` table (`rental_id` PK, `status`, `next_action` as
+UTC RFC3339, `answers` as a JSON object, `updated_at`) with no foreign key;
+`Save` is one upsert; `Get` on a missing trail returns `viewing.NewTrail(id)`;
+`Save` rejects an unknown status; `InitDB` chmods the database file to 0o600
+after the first DDL statement (no-op on Windows); logs carry only the rental ID
+and answer count. Orphans are prevented rather than handled: the maintainer
+decided (2026-10-04) that the delete confirmation offers only "delete rental and
+its viewing notes" or "cancel", and `DeleteRentalAndTrail` removes both in one
+transaction. This narrows the 2026-10-03 note: "keep notes after the rental is
+gone" is not offered, so no orphan-listing method exists. Slice 3 must route
+`ui.DeleteRentalUI` through `DeleteRentalAndTrail` and add that confirmation.
+
 Slice 1 takes no search-profile input because Task 013 does not exist yet; the
 profile source is added when 013 lands (deviation from the first DoD bullet,
 which says "when present").
