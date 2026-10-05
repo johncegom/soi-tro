@@ -14,9 +14,12 @@ const (
 	fieldFloor       = "floor"
 	fieldParkingFee  = "parking_fee"
 	fieldPetsAllowed = "pets_allowed"
+	fieldDeposit     = "deposit"
+	fieldElectricity = "electricity"
+	fieldWater       = "water"
 )
 
-var standardFieldKeys = []string{fieldPrice, "deposit", fieldFloor, fieldParkingFee, fieldPetsAllowed, "electricity", "water"}
+var standardFieldKeys = []string{fieldPrice, fieldDeposit, fieldFloor, fieldParkingFee, fieldPetsAllowed, fieldElectricity, fieldWater}
 
 // Schema properties shown outside the field table.
 const (

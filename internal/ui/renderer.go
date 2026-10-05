@@ -240,6 +240,12 @@ func RenderComparisonTable(records []database.RentalRecord) {
 	}
 	appendRow(table, rowPhone)
 
+	rowTrail := []string{"Hồ sơ xem phòng"}
+	for _, rec := range records {
+		rowTrail = append(rowTrail, trailSummaryFor(rec.ID))
+	}
+	appendRow(table, rowTrail)
+
 	for _, field := range fields {
 		row := []string{field.name}
 		for _, rec := range records {

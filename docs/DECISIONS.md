@@ -207,3 +207,29 @@ verification at startup (legacy migration path), so a hand-edit made while the
 app is not running is silently blessed on the next start; only edits made
 between startup and use are caught. Rotating the constant is therefore harmless.
 Tightening that migration path is a separate decision if anyone needs it.
+
+## DECISION-010: Store a viewing next-action date as a UTC calendar date
+
+**Context (2026-10-05):** Task 015 lets the user set an optional next-action
+date on a rental's decision trail. The `decision_trails.next_action` column
+stores UTC RFC3339 and `DecisionTrailStore.Get` returns UTC. The user enters a
+day (`YYYY-MM-DD`), not a moment, and the maintainer's machine runs at UTC+7.
+
+**Decision:** Treat the next-action date as a calendar date. `parseNextAction`
+builds `time.Date(y, m, d, 0, 0, 0, 0, time.UTC)`, and every display formats it
+with `.UTC()`. A blank input clears the date. A test sets `time.Local` to UTC+7
+and checks that the entered day reads back unchanged. No schema change.
+
+**Alternatives considered:** Parsing to local midnight (the first leaning) looks
+natural, but it saves as the previous day in UTC: in UTC+7, `2026-10-10` comes
+back as `2026-10-09` unless every reader remembers `.Local()`, and the result
+would also change with the machine's time zone. A date-only `TEXT` column would
+make the meaning explicit, but it needs a migration for a value the existing
+column can already hold.
+
+**Consequences:** The stored day does not change with the machine's time zone.
+Any future code that compares the date with "today" (reminders, overdue
+markers, sorting) must turn today into a UTC calendar date
+(`time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)` from the
+local `now`) and not compare against `time.Now()` directly. Formatting the date
+without `.UTC()` would bring the off-by-one-day bug back.
