@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"soi-tro/internal/database"
 	"soi-tro/internal/preferences"
 
@@ -23,13 +24,7 @@ func ShowHistoryAndCompareMenu() error {
 			huh.NewGroup(
 				huh.NewSelect[string]().
 					Title("LỊCH SỬ & SO SÁNH PHÒNG TRỌ").
-					Options(
-						huh.NewOption("1. So sánh song song (2-3 phòng)", "compare"),
-						huh.NewOption("2. Xem danh sách lịch sử", "list"),
-						huh.NewOption("3. Hồ sơ xem phòng (checklist & quyết định)", "viewing"),
-						huh.NewOption("4. Xóa một phòng trọ khỏi lịch sử", "delete"),
-						huh.NewOption("5. Quay lại menu chính", backChoice),
-					).
+					Options(historyMenuOptions(devModeEnabled())...).
 					Value(&choice),
 			),
 		)
@@ -50,6 +45,10 @@ func ShowHistoryAndCompareMenu() error {
 		case "list":
 			if err := ListRentalsUI(); err != nil {
 				fmt.Printf("❌ Lỗi hiển thị danh sách phòng: %v\n", err)
+			}
+		case "samples":
+			if err := SampleDataUI(); err != nil {
+				fmt.Printf("❌ Lỗi dữ liệu mẫu: %v\n", err)
 			}
 		case "viewing":
 			if err := ViewingTrailUI(); err != nil {
@@ -219,5 +218,66 @@ func DeleteRentalUI() error {
 		return err
 	}
 	fmt.Printf("✨ Đã xóa thành công phòng trọ #%d khỏi lịch sử!\n", selectedID)
+	return nil
+}
+
+// devModeEnabled reports whether developer-only menu entries are shown.
+func devModeEnabled() bool { return os.Getenv("SOI_TRO_DEV") == "1" }
+
+func historyMenuOptions(dev bool) []huh.Option[string] {
+	options := []huh.Option[string]{
+		huh.NewOption("1. So sánh song song (2-3 phòng)", "compare"),
+		huh.NewOption("2. Xem danh sách lịch sử", "list"),
+		huh.NewOption("3. Hồ sơ xem phòng (checklist & quyết định)", "viewing"),
+		huh.NewOption("4. Xóa một phòng trọ khỏi lịch sử", "delete"),
+	}
+	if dev {
+		options = append(options, huh.NewOption("🧪 Dữ liệu mẫu (dev)", "samples"))
+	}
+
+	return append(options, huh.NewOption("5. Quay lại menu chính", backChoice))
+}
+
+// SampleDataUI seeds or removes fake rentals used for manual testing.
+func SampleDataUI() error {
+	var choice string
+
+	form := huh.NewForm(huh.NewGroup(
+		huh.NewSelect[string]().
+			Title("DỮ LIỆU MẪU (chỉ để thử nghiệm, gắn nhãn "+database.SamplePrefix+")").
+			Options(
+				huh.NewOption("Thêm phòng mẫu", "seed"),
+				huh.NewOption("Xóa tất cả phòng mẫu và hồ sơ xem phòng của chúng", "delete"),
+				huh.NewOption("Quay lại", backChoice),
+			).
+			Value(&choice),
+	))
+
+	backPressed, err := RunFormWithArrows(form)
+	if err != nil || backPressed {
+		return err
+	}
+
+	switch choice {
+	case "seed":
+		n, err := database.SeedSampleRentals()
+		if err != nil {
+			return err
+		}
+
+		if n == 0 {
+			fmt.Println("ℹ️  Phòng mẫu đã có sẵn, không thêm nữa.")
+		} else {
+			fmt.Printf("🧪 Đã thêm %d phòng mẫu.\n", n)
+		}
+	case "delete":
+		n, err := database.DeleteSampleRentals()
+		if err != nil {
+			return err
+		}
+
+		fmt.Printf("🧹 Đã xóa %d phòng mẫu.\n", n)
+	}
+
 	return nil
 }

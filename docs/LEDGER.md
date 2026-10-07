@@ -24,6 +24,7 @@ remain unapproved until the maintainer selects them for implementation.
 | 016 | Make UI field ordering deterministic and testable | Complete | `docs/tasks/016-ui-field-ordering-testability.md` |
 | 017 | Make lint, format and security scans trustworthy | Complete | `docs/tasks/017-lint-format-security-hardening.md` |
 | 018 | Make the test suite pass on Windows | Complete | `docs/tasks/018-windows-test-portability.md` |
+| 019 | Add removable sample rentals for manual testing | In progress | `docs/tasks/019-dev-sample-data.md` |
 
 ## Resume checklist
 
