@@ -1,12 +1,18 @@
 package ui
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"soi-tro/internal/database"
 	"soi-tro/internal/preferences"
 
 	"github.com/charmbracelet/huh"
+)
+
+const (
+	deleteCancel  = "cancel"
+	deleteConfirm = "delete_with_notes"
 )
 
 // ShowHistoryAndCompareMenu runs the history submenu until the user goes back.
@@ -20,8 +26,9 @@ func ShowHistoryAndCompareMenu() error {
 					Options(
 						huh.NewOption("1. So sánh song song (2-3 phòng)", "compare"),
 						huh.NewOption("2. Xem danh sách lịch sử", "list"),
-						huh.NewOption("3. Xóa một phòng trọ khỏi lịch sử", "delete"),
-						huh.NewOption("4. Quay lại menu chính", backChoice),
+						huh.NewOption("3. Hồ sơ xem phòng (checklist & quyết định)", "viewing"),
+						huh.NewOption("4. Xóa một phòng trọ khỏi lịch sử", "delete"),
+						huh.NewOption("5. Quay lại menu chính", backChoice),
 					).
 					Value(&choice),
 			),
@@ -43,6 +50,10 @@ func ShowHistoryAndCompareMenu() error {
 		case "list":
 			if err := ListRentalsUI(); err != nil {
 				fmt.Printf("❌ Lỗi hiển thị danh sách phòng: %v\n", err)
+			}
+		case "viewing":
+			if err := ViewingTrailUI(); err != nil {
+				fmt.Printf("❌ Lỗi hồ sơ xem phòng: %v\n", err)
 			}
 		case "delete":
 			if err := DeleteRentalUI(); err != nil {
@@ -133,6 +144,7 @@ func ListRentalsUI() error {
 		fmt.Printf("🏠 [ID #%d] Ngày: %s\n", rec.ID, rec.CreatedAt)
 		fmt.Printf("   - Giá thuê: %s | Đặt cọc: %s | Tầng: %s\n", rec.Result.Price, rec.Result.Deposit, rec.Result.Floor)
 		fmt.Printf("   - Liên hệ: %s | Điện: %s | Nước: %s\n", rec.Result.PhoneNumber, rec.Result.Electricity, rec.Result.Water)
+		fmt.Printf("   - 📌 Hồ sơ xem phòng: %s\n", trailSummaryFor(rec.ID))
 		if len(rec.Result.MissingFields) > 0 {
 			fmt.Printf("   - ⚠️  Thiếu thông tin: %v\n", rec.Result.MissingFields)
 		}
@@ -180,12 +192,17 @@ func DeleteRentalUI() error {
 		return nil
 	}
 
-	var confirmDelete bool
+	// Cancel is listed first so a stray Enter never deletes.
+	choice := deleteCancel
 	confirmForm := huh.NewForm(
 		huh.NewGroup(
-			huh.NewConfirm().
-				Title(fmt.Sprintf("Bạn có chắc chắn muốn xóa phòng trọ #%d?", selectedID)).
-				Value(&confirmDelete),
+			huh.NewSelect[string]().
+				Title(fmt.Sprintf("Xóa phòng trọ #%d?", selectedID)).
+				Options(
+					huh.NewOption("Hủy", deleteCancel),
+					huh.NewOption("Xóa phòng và ghi chú xem phòng", deleteConfirm),
+				).
+				Value(&choice),
 		),
 	)
 
@@ -193,12 +210,12 @@ func DeleteRentalUI() error {
 	if err != nil {
 		return err
 	}
-	if backPressed || !confirmDelete {
+	if backPressed || choice != deleteConfirm {
 		fmt.Println("Đã hủy bỏ xóa.")
 		return nil
 	}
 
-	if err := database.DeleteRental(selectedID); err != nil {
+	if err := database.DeleteRentalAndTrail(context.Background(), selectedID); err != nil {
 		return err
 	}
 	fmt.Printf("✨ Đã xóa thành công phòng trọ #%d khỏi lịch sử!\n", selectedID)

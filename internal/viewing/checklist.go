@@ -15,6 +15,8 @@ const (
 	SourceMissingField ItemSource = iota
 	// SourceDefault marks an item from the documented default checklist.
 	SourceDefault
+	// SourceVerify marks an editor-only item that checks a claim the listing made.
+	SourceVerify
 )
 
 // ChecklistItem is one question to settle about a rental.

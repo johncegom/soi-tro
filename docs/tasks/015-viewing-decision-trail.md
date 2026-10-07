@@ -83,6 +83,48 @@ transaction. This narrows the 2026-10-03 note: "keep notes after the rental is
 gone" is not offered, so no orphan-listing method exists. Slice 3 must route
 `ui.DeleteRentalUI` through `DeleteRentalAndTrail` and add that confirmation.
 
+### Slice 3 program design
+
+Advise ran 2026-10-05 (see `docs/eagd-log.md`). No schema change; no new
+interface: the UI uses `database.NewDecisionTrailStore(database.DB)` directly.
+
+- `internal/viewing` (pure, tested): `EditableItems(checklist []ChecklistItem,
+  claims map[ItemID]string) []ChecklistItem` returns the checklist followed by a
+  verify item for each claimed field not already in it (question is
+  `Xác nhận: <key> (tin đăng: <claim>)`), so a viewing answer can be checked
+  against a listing claim and `AnswerLine.Differs` can become true. Verify items
+  are for the editor only; the follow-up still uses the checklist's unresolved
+  items, so claims and notes never reach it.
+- `internal/ui/viewing.go`: pure helpers `claimsFromResult(*gemini.RentalExtractionResult)
+  map[ItemID]string` (uses `RawFields`, fills the standard fields only where
+  `RawFields` lacks the key, drops `additional_notes`), `parseNextAction(string)
+  (*time.Time, error)`, `formatNextAction(*time.Time) string`,
+  `statusLabel(DecisionStatus) string`, `applyAnswer(*DecisionTrail, ItemID, string)
+  error` (blank clears, otherwise sets), `trailSummary(DecisionTrail) string` and
+  `renderReview(io.Writer, DecisionTrail, Review)`. Thin `huh` forms:
+  `ViewingTrailUI()` (pick rental, then answers / status and date / three-way view /
+  follow-up) and a "Hồ sơ xem phòng" entry in `ShowHistoryAndCompareMenu`.
+- Next-action date is a calendar date, not a moment: `parseNextAction` builds
+  `time.Date(y, m, d, 0, 0, 0, 0, time.UTC)` from `YYYY-MM-DD` (blank clears) and
+  every display formats with `.UTC()`, so the day cannot shift with the machine's
+  time zone (the store round-trips UTC).
+- Follow-up: show the message, then a `huh.Confirm` defaulting to No; copy only on
+  Yes. An empty message prints "nothing to ask" and offers no copy. A clipboard
+  error is printed without the message text.
+- History and comparison: `ListRentalsUI` and `RenderComparisonTable` read each
+  trail with `Get` only (never `Save` or `Delete`) and show `trailSummary`; a
+  failed `Get` shows "không đọc được" for that rental instead of failing the view.
+- Delete: `DeleteRentalUI` replaces its Confirm with a Select of "Hủy" (listed
+  first and preselected) and "Xóa phòng và ghi chú xem phòng", calling
+  `database.DeleteRentalAndTrail`; back also cancels.
+- Notes never enter errors or logs: no answer text is passed to `fmt.Errorf` or
+  `logger.*`; `renderReview` writes only to its `io.Writer`.
+- Follow-ups: `database.DeleteRental` keeps only a test caller after this slice
+  (candidate cleanup, separate item); `renderer.go` auto-copies the phone number
+  and polite message after analysis (candidate idea, separate item).
+
+Slice 3 is complete (`internal/ui/viewing.go`, `internal/viewing/editable.go`). It follows the design above with no deviation. The history menu gains "Hồ sơ xem phòng"; the list and comparison table show each rental's status read-only; delete uses the cancel-first Select and `DeleteRentalAndTrail`. Manual terminal checks (restart persistence, mixed answers, follow-up excluding answered questions) are still the maintainer's to run: the huh forms are not unit-tested.
+
 Slice 1 takes no search-profile input because Task 013 does not exist yet; the
 profile source is added when 013 lands (deviation from the first DoD bullet,
 which says "when present").
